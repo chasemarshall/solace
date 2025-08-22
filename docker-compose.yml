@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8080:3000"
+    environment:
+      NODE_ENV: production
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:8080}
+      NEXT_PUBLIC_TWITCH_PARENT: ${NEXT_PUBLIC_TWITCH_PARENT:-localhost}
+    restart: unless-stopped
