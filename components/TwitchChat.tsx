@@ -500,30 +500,32 @@ export default function TwitchChat({ channel }: { channel: string }) {
 
                   {/* Username line (only show if not same user or has reply) */}
                   {(!sameUser || m.replyTo) && (
-                    <div className="flex items-center gap-1.5">
-                      {/* Badges */}
-                      {m.badges.map((badge, idx) => (
-                        <span
-                          key={`${badge.setID}-${badge.version}-${idx}`}
-                          className="text-sm leading-none"
-                          title={`${badge.setID}`}
-                        >
-                          {badge.emoji}
-                        </span>
-                      ))}
+                    <div className="text-sm">
+                      <span className="inline-flex items-center gap-1.5 flex-wrap">
+                        {/* Badges */}
+                        {m.badges.map((badge, idx) => (
+                          <span
+                            key={`${badge.setID}-${badge.version}-${idx}`}
+                            className="text-sm leading-none"
+                            title={`${badge.setID}`}
+                          >
+                            {badge.emoji}
+                          </span>
+                        ))}
 
-                      {/* Username with inline message */}
-                      <span 
-                        className="font-bold cursor-pointer hover:underline transition-all duration-150 text-sm" 
-                        style={{ color: enhanceUserColor(m.color) }}
-                        onClick={() => handleReply(m)}
-                        title="Click to reply"
-                      >
-                        {m.displayName}:
+                        {/* Username */}
+                        <span 
+                          className="font-bold cursor-pointer hover:underline transition-all duration-150" 
+                          style={{ color: enhanceUserColor(m.color) }}
+                          onClick={() => handleReply(m)}
+                          title="Click to reply"
+                        >
+                          {m.displayName}:
+                        </span>
                       </span>
                       
-                      {/* Message text inline with username */}
-                      <span className="leading-relaxed text-text break-words text-sm">
+                      {/* Message text on same line */}
+                      <span className="leading-relaxed text-text break-words ml-1">
                         {messageParts.map((part, idx) => {
                           if (part.type === 'emote' && part.emoteUrl) {
                             return (
