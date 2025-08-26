@@ -1,123 +1,4 @@
-// Enhanced user color - make colors more vibrant
-  const enhanceUserColor = (color?: string) => {
-    if (!color) return '#e0e6ed';
-    
-    // Brighten dark colors
-    const hex = color.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    
-    // If color is too dark, brighten it
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    if (brightness < 120) {
-      const factor = 1.8;
-      return `rgb(${Math.min(255, r * factor)}, ${Math.min(255, g * factor)}, ${Math.min(255, b * factor)})`;
-    }
-    
-    return color;
-  };        <div className="p-1 space-y-0.5">
-          {messages.map((m, msgIndex) => {
-            const messageParts = parseMessage(m);
-            
-            // Check if this message is from same user as previous (for grouping)
-            const prevMsg = messages[msgIndex - 1];
-            const sameUser = prevMsg && prevMsg.user === m.user && 
-              (m.timestamp.getTime() - prevMsg.timestamp.getTime()) < 60000; // Within 1 minute
-            
-            return (
-              <div 
-                key={m.id} 
-                className={`group relative px-3 py-1.5 transition-all duration-150 hover:bg-white/5 ${
-                  m.isMention ? 'bg-purple-500/20 border-l-2 border-purple-400' : ''
-                } flex items-start gap-2`}
-              >
-                <div className="flex-1 min-w-0">
-                  {/* Reply indicator */}
-                  {m.replyTo && (
-                    <div className="mb-1 flex items-center gap-1.5 text-xs bg-white/5 rounded-md px-2 py-1 border-l-2 border-text-muted">
-                      <svg className="h-3 w-3 text-text-muted" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414L2.586 8l3.707-3.707a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-text-muted">replying to</span>
-                      <span className="font-semibold text-white">
-                        {m.replyTo.displayName}
-                      </span>
-                      <span className="truncate max-w-32 text-text-muted italic">
-                        "{m.replyTo.message.length > 25 ? `${m.replyTo.message.substring(0, 25)}...` : m.replyTo.message}"
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Username line (only show if not same user or has reply) */}
-                  {(!sameUser || m.replyTo) && (
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      {/* Badges */}
-                      {m.badges.map((badge, idx) => (
-                        <span
-                          key={`${badge.setID}-${badge.version}-${idx}`}
-                          className="text-sm leading-none"
-                          title={`${badge.setID}`}
-                        >
-                          {badge.emoji}
-                        </span>
-                      ))}
-
-                      {/* Username */}
-                      <span 
-                        className="font-bold cursor-pointer hover:underline transition-all duration-150 text-sm" 
-                        style={{ color: m.color || '#ffffff' }}
-                        onClick={() => handleReply(m)}
-                        title="Click to reply"
-                      >
-                        {m.displayName}:
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Message text with emotes */}
-                  <div className="leading-relaxed text-gray-100 break-words text-sm">
-                    {messageParts.map((part, idx) => {
-                      if (part.type === 'emote' && part.emoteUrl) {
-                        return (
-                          <span
-                            key={idx}
-                            className="inline-block h-6 w-6 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
-                            style={{ backgroundImage: `url(${part.emoteUrl})` }}
-                            title={part.content}
-                          />
-                        );
-                      } else {
-                        // Handle mentions highlighting
-                        if (part.content.startsWith('@')) {
-                          return (
-                            <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
-                              {part.content}
-                            </span>
-                          );
-                        }
-                        return <span key={idx}>{part.content}</span>;
-                      }
-                    })}
-                  </div>
-                </div>
-
-                {/* Reply button on the right */}
-                {canSend && (
-                  <button
-                    onClick={() => handleReply(m)}
-                    className="opacity-0 transition-all duration-200 group-hover:opacity-100 rounded-lg p-2 hover:bg-gray-700/60 text-gray-500 hover:text-white flex-shrink-0"
-                    title="Reply to this message"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>"use client";
+"use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connectChat } from "@/lib/twitch/chat";
@@ -170,6 +51,26 @@ export default function TwitchChat({ channel }: { channel: string }) {
   const username = process.env.NEXT_PUBLIC_TWITCH_CHAT_USERNAME || process.env.TWITCH_CHAT_USERNAME;
   const oauth = process.env.NEXT_PUBLIC_TWITCH_CHAT_OAUTH || process.env.TWITCH_CHAT_OAUTH;
   const canSend = !!username && !!oauth;
+
+  // Enhanced user color - make colors more vibrant
+  const enhanceUserColor = (color?: string) => {
+    if (!color) return '#e0e6ed';
+    
+    // Brighten dark colors
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // If color is too dark, brighten it
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    if (brightness < 120) {
+      const factor = 1.8;
+      return `rgb(${Math.min(255, r * factor)}, ${Math.min(255, g * factor)}, ${Math.min(255, b * factor)})`;
+    }
+    
+    return color;
+  };
 
   // Enhanced badge mapping with more emojis
   const getBadgeEmoji = (setID: string, version: string): string | null => {
@@ -503,16 +404,6 @@ export default function TwitchChat({ channel }: { channel: string }) {
     setReplyingTo(null);
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit'
-    });
-  };
-
-
-
   return (
     <div className="flex h-full flex-col bg-surface overflow-hidden rounded-xl">
       {/* Header */}
@@ -536,7 +427,6 @@ export default function TwitchChat({ channel }: { channel: string }) {
         <div className="p-1 space-y-0.5">
           {messages.map((m, msgIndex) => {
             const messageParts = parseMessage(m);
-            const userColor = enhanceUserColor(m.color);
             
             // Check if this message is from same user as previous (for grouping)
             const prevMsg = messages[msgIndex - 1];
@@ -546,99 +436,92 @@ export default function TwitchChat({ channel }: { channel: string }) {
             return (
               <div 
                 key={m.id} 
-                className={`group relative px-3 py-1.5 transition-all duration-150 hover:bg-gray-800/40 ${
-                  m.isMention ? 'bg-purple-900/20 border-l-2 border-purple-400' : ''
-                }`}
+                className={`group relative px-3 py-1.5 transition-all duration-150 hover:bg-white/5 ${
+                  m.isMention ? 'bg-purple-500/20 border-l-2 border-purple-400' : ''
+                } flex items-start gap-2`}
               >
-                {/* Reply indicator */}
-                {m.replyTo && (
-                  <div className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
-                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414L2.586 8l3.707-3.707a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span className="font-medium text-gray-400">
-                      {m.replyTo.displayName}
-                    </span>
-                    <span className="truncate max-w-40 text-gray-500">
-                      {m.replyTo.message.length > 30 ? `${m.replyTo.message.substring(0, 30)}...` : m.replyTo.message}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-start gap-2">
-                  {/* Timestamp (only on hover) */}
-                  <span className="mt-0.5 text-xs text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 font-mono min-w-[35px]">
-                    {formatTime(m.timestamp)}
-                  </span>
-
-                  {/* Message content */}
-                  <div className="flex-1 min-w-0">
-                    {/* Username line (only show if not same user or has reply) */}
-                    {(!sameUser || m.replyTo) && (
-                      <div className="flex items-center gap-1 mb-0.5">
-                        {/* Badges */}
-                        {m.badges.map((badge, idx) => (
-                          <span
-                            key={`${badge.setID}-${badge.version}-${idx}`}
-                            className="text-sm leading-none"
-                            title={`${badge.setID}`}
-                          >
-                            {badge.emoji}
-                          </span>
-                        ))}
-
-                        {/* Username */}
-                        <span 
-                          className="font-bold cursor-pointer hover:underline transition-all duration-150 text-sm" 
-                          style={{ color: userColor }}
-                          onClick={() => handleReply(m)}
-                          title="Click to reply"
-                        >
-                          {m.displayName}:
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Message text with emotes */}
-                    <div className="leading-relaxed text-text break-words text-sm">
-                      {messageParts.map((part, idx) => {
-                        if (part.type === 'emote' && part.emoteUrl) {
-                          return (
-                            <span
-                              key={idx}
-                              className="inline-block h-6 w-6 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
-                              style={{ backgroundImage: `url(${part.emoteUrl})` }}
-                              title={part.content}
-                            />
-                          );
-                        } else {
-                          // Handle mentions highlighting
-                          if (part.content.startsWith('@')) {
-                            return (
-                              <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
-                                {part.content}
-                              </span>
-                            );
-                          }
-                          return <span key={idx}>{part.content}</span>;
-                        }
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Reply button on the right */}
-                  {canSend && (
-                    <button
-                      onClick={() => handleReply(m)}
-                      className="opacity-0 transition-all duration-200 group-hover:opacity-100 rounded-lg p-2 hover:bg-white/10 text-text-muted hover:text-white flex-shrink-0"
-                      title="Reply to this message"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                <div className="flex-1 min-w-0">
+                  {/* Reply indicator */}
+                  {m.replyTo && (
+                    <div className="mb-1 flex items-center gap-1.5 text-xs bg-white/5 rounded-md px-2 py-1 border-l-2 border-text-muted">
+                      <svg className="h-3 w-3 text-text-muted" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414L2.586 8l3.707-3.707a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                    </button>
+                      <span className="text-text-muted">replying to</span>
+                      <span className="font-semibold text-white">
+                        {m.replyTo.displayName}
+                      </span>
+                      <span className="truncate max-w-32 text-text-muted italic">
+                        &quot;{m.replyTo.message.length > 25 ? `${m.replyTo.message.substring(0, 25)}...` : m.replyTo.message}&quot;
+                      </span>
+                    </div>
                   )}
+
+                  {/* Username line (only show if not same user or has reply) */}
+                  {(!sameUser || m.replyTo) && (
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      {/* Badges */}
+                      {m.badges.map((badge, idx) => (
+                        <span
+                          key={`${badge.setID}-${badge.version}-${idx}`}
+                          className="text-sm leading-none"
+                          title={`${badge.setID}`}
+                        >
+                          {badge.emoji}
+                        </span>
+                      ))}
+
+                      {/* Username */}
+                      <span 
+                        className="font-bold cursor-pointer hover:underline transition-all duration-150 text-sm" 
+                        style={{ color: enhanceUserColor(m.color) }}
+                        onClick={() => handleReply(m)}
+                        title="Click to reply"
+                      >
+                        {m.displayName}:
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Message text with emotes */}
+                  <div className="leading-relaxed text-text break-words text-sm">
+                    {messageParts.map((part, idx) => {
+                      if (part.type === 'emote' && part.emoteUrl) {
+                        return (
+                          <span
+                            key={idx}
+                            className="inline-block h-6 w-6 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
+                            style={{ backgroundImage: `url(${part.emoteUrl})` }}
+                            title={part.content}
+                          />
+                        );
+                      } else {
+                        // Handle mentions highlighting
+                        if (part.content.startsWith('@')) {
+                          return (
+                            <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
+                              {part.content}
+                            </span>
+                          );
+                        }
+                        return <span key={idx}>{part.content}</span>;
+                      }
+                    })}
+                  </div>
                 </div>
+
+                {/* Reply button on the right */}
+                {canSend && (
+                  <button
+                    onClick={() => handleReply(m)}
+                    className="opacity-0 transition-all duration-200 group-hover:opacity-100 rounded-lg p-2 hover:bg-white/10 text-text-muted hover:text-white flex-shrink-0"
+                    title="Reply to this message"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                  </button>
+                )}
               </div>
             );
           })}
