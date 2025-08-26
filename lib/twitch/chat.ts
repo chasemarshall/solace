@@ -1,7 +1,7 @@
-import tmi from "tmi.js";
+import tmi, { Options } from "tmi.js";
 
 export function connectChat({ channel, username, oauth }: { channel: string; username?: string; oauth?: string }) {
-  const opts: tmi.Options = {
+  const opts: Options = {
     connection: { secure: true, reconnect: true },
     channels: [channel],
   };
