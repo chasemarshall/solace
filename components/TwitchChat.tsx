@@ -40,7 +40,7 @@ type Msg = {
     displayName: string;
     message: string;
   };
-  isMention?: boolean;
+  isMention: boolean;
 };
 
 export default function TwitchChat({ channel }: { channel: string }) {
@@ -214,7 +214,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
       }
 
       // Check if message mentions the current user
-      const isMention = username && msg.toLowerCase().includes(`@${username.toLowerCase()}`);
+      const isMention = Boolean(username && msg.toLowerCase().includes(`@${username.toLowerCase()}`));
 
       setMessages((m) => [
         ...m.slice(-99), // Keep last 99 messages for performance
@@ -405,28 +405,13 @@ export default function TwitchChat({ channel }: { channel: string }) {
                     <div className="flex items-center gap-1">
                       {/* Badges */}
                       {m.badges.map((badge, idx) => (
-                        <img
+                        <span
                           key={`${badge.setID}-${badge.version}-${idx}`}
-                          src={badge.imageUrl1x}
-                          alt={badge.title}
+                          className="text-xs"
                           title={badge.title}
-                          className="h-4 w-4 flex-shrink-0"
-                          onError={(e) => {
-                            // Fallback to emoji for common badges
-                            const target = e.target as HTMLImageElement;
-                            const emojiMap: { [key: string]: string } = {
-                              broadcaster: "🔴",
-                              moderator: "⚔️",
-                              subscriber: "⭐",
-                              vip: "💎",
-                              premium: "👑"
-                            };
-                            if (emojiMap[badge.setID]) {
-                              target.style.display = 'none';
-                              target.insertAdjacentText('afterend', emojiMap[badge.setID]);
-                            }
-                          }}
-                        />
+                        >
+                          {badge.title}
+                        </span>
                       ))}
 
                       {/* Username */}
@@ -445,18 +430,11 @@ export default function TwitchChat({ channel }: { channel: string }) {
                       {messageParts.map((part, idx) => {
                         if (part.type === 'emote' && part.emoteUrl) {
                           return (
-                            <img
+                            <span
                               key={idx}
-                              src={part.emoteUrl}
-                              alt={part.emoteName || part.content}
+                              className="inline-block h-7 w-7 bg-cover bg-center bg-no-repeat align-middle"
+                              style={{ backgroundImage: `url(${part.emoteUrl})` }}
                               title={part.emoteName || part.content}
-                              className="inline h-7 w-auto align-middle"
-                              onError={(e) => {
-                                // Fallback to text if emote fails to load
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                target.insertAdjacentText('afterend', part.content);
-                              }}
                             />
                           );
                         } else {
