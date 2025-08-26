@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import LiveCard from "@/components/LiveCard";
 
 type Stream = {
@@ -19,7 +19,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     if (loading) return;
     setLoading(true);
     const url = new URL("/api/streams", window.location.origin);
@@ -30,9 +30,9 @@ export default function Home() {
     setItems((prev) => [...prev, ...(j.data || [])]);
     setCursor(j.pagination?.cursor ?? null);
     setLoading(false);
-  }
+  }, [loading, cursor]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -42,7 +42,7 @@ export default function Home() {
     }, { rootMargin: "800px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [cursor, loading]);
+  }, [load]);
 
   return (
     <div>

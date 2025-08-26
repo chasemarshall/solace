@@ -126,7 +126,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           const children = Array.from(containerRef.current.children);
           children.forEach(child => {
             try {
-              if (child.parentNode === containerRef.current) {
+              if (child.parentNode === containerRef.current && containerRef.current) {
                 containerRef.current.removeChild(child);
               }
             } catch (e) {

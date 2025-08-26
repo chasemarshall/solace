@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { fmtViewers, twitchThumb } from "@/lib/utils";
 
 type Stream = {
@@ -18,9 +19,11 @@ export default function LiveCard({ s }: { s: Stream }) {
   return (
     <Link href={`/watch/${encodeURIComponent(s.user_login || s.user_name)}`} className="group block">
       <div className="aspect-video overflow-hidden rounded-xl bg-black/30">
-        <img
+        <Image
           src={thumb}
           alt={s.title}
+          width={640}
+          height={360}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />
