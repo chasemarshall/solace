@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { connectChat } from "@/lib/twitch/chat";
 
-type Msg = { id: string; user: string; text: string };
+type Msg = { id: string; user: string; text: string; color?: string };
 
 export default function TwitchChat({ channel }: { channel: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const clientRef = useRef<any>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const username = process.env.NEXT_PUBLIC_TWITCH_CHAT_USERNAME || process.env.TWITCH_CHAT_USERNAME;
   const oauth = process.env.NEXT_PUBLIC_TWITCH_CHAT_OAUTH || process.env.TWITCH_CHAT_OAUTH;
   const canSend = !!username && !!oauth;
@@ -20,7 +21,12 @@ export default function TwitchChat({ channel }: { channel: string }) {
       if (self) return;
       setMessages((m) => [
         ...m.slice(-100),
-        { id: tags.id || Date.now().toString(), user: tags["display-name"] || tags.username || "", text: msg },
+        {
+          id: tags.id || Date.now().toString(),
+          user: tags["display-name"] || tags.username || "",
+          text: msg,
+          color: tags.color,
+        },
       ]);
     });
     return () => {
@@ -28,6 +34,13 @@ export default function TwitchChat({ channel }: { channel: string }) {
       clientRef.current = null;
     };
   }, [channel, username, oauth]);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,10 +51,12 @@ export default function TwitchChat({ channel }: { channel: string }) {
 
   return (
     <div className="flex h-full flex-col text-sm text-text">
-      <div className="flex-1 space-y-1 overflow-y-auto p-2">
+      <div ref={listRef} className="flex-1 space-y-1 overflow-y-auto p-2">
         {messages.map((m) => (
           <div key={m.id}>
-            <span className="font-semibold">{m.user}: </span>
+            <span className="font-semibold" style={{ color: m.color }}>
+              {m.user}: 
+            </span>
             <span>{m.text}</span>
           </div>
         ))}
