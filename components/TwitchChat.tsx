@@ -181,23 +181,13 @@ export default function TwitchChat({ channel }: { channel: string }) {
       const badges: Badge[] = [];
       if (tags.badges) {
         Object.entries(tags.badges).forEach(([setID, version]: [string, any]) => {
-          // Common badge mappings
-          const badgeMap: { [key: string]: string } = {
-            broadcaster: "🔴",
-            moderator: "⚔️",
-            subscriber: "⭐",
-            vip: "💎",
-            premium: "👑",
-            turbo: "⚡"
-          };
-          
           badges.push({
             setID,
             version: version.toString(),
             imageUrl1x: `https://static-cdn.jtvnw.net/badges/v1/${setID}/${version}/1`,
             imageUrl2x: `https://static-cdn.jtvnw.net/badges/v1/${setID}/${version}/2`,
             imageUrl4x: `https://static-cdn.jtvnw.net/badges/v1/${setID}/${version}/3`,
-            title: badgeMap[setID] || setID
+            title: setID
           });
         });
       }
@@ -249,7 +239,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
   // Parse message with emotes
   const parseMessage = useCallback((message: Msg) => {
     let text = message.text;
-    const parts: Array<{ type: 'text' | 'emote'; content: string; emoteUrl?: string; emoteName?: string }> = [];
+    const parts: Array<{ type: 'text' | 'emote'; content: string; emoteUrl?: string }> = [];
     
     // Handle Twitch emotes first
     const twitchEmoteRanges: Array<{ start: number; end: number; id: string }> = [];
@@ -263,7 +253,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
     // Sort by start position (reverse to replace from end to start)
     twitchEmoteRanges.sort((a, b) => b.start - a.start);
     
-    // Replace Twitch emotes
+    // Replace Twitch emotes with placeholders
     twitchEmoteRanges.forEach(({ start, end, id }) => {
       const emoteName = text.substring(start, end + 1);
       const before = text.substring(0, start);
@@ -271,52 +261,37 @@ export default function TwitchChat({ channel }: { channel: string }) {
       text = before + `__TWITCH_EMOTE_${id}_${emoteName}__` + after;
     });
 
-    // Split text into words and check for BTTV/FFZ emotes
+    // Split by spaces and process each word
     const words = text.split(' ');
+    
     words.forEach((word, index) => {
       if (word.startsWith('__TWITCH_EMOTE_')) {
         const match = word.match(/__TWITCH_EMOTE_(\d+)_(.+)__/);
         if (match) {
-          const [, emoteId, emoteName] = match;
+          const [, emoteId] = match;
           parts.push({
             type: 'emote',
-            content: emoteName,
-            emoteUrl: `https://static-cdn.jtvnw.net/emoticons/v2/${emoteId}/default/dark/1.0`,
-            emoteName
+            content: word,
+            emoteUrl: `https://static-cdn.jtvnw.net/emoticons/v2/${emoteId}/default/dark/1.0`
           });
         }
       } else if (bttvEmotes[word]) {
         parts.push({
           type: 'emote',
           content: word,
-          emoteUrl: bttvEmotes[word].urls["1"],
-          emoteName: word
+          emoteUrl: bttvEmotes[word].urls["1"]
         });
       } else if (ffzEmotes[word]) {
         parts.push({
           type: 'emote',
           content: word,
-          emoteUrl: ffzEmotes[word].urls["1"],
-          emoteName: word
+          emoteUrl: ffzEmotes[word].urls["1"]
         });
       } else {
-        // Handle mentions
-        if (word.startsWith('@') && word.length > 1) {
-          parts.push({
-            type: 'text',
-            content: word
-          });
-        } else {
-          parts.push({
-            type: 'text',
-            content: word
-          });
-        }
-      }
-      
-      // Add space between words (except for last word)
-      if (index < words.length - 1) {
-        parts.push({ type: 'text', content: ' ' });
+        parts.push({
+          type: 'text',
+          content: word
+        });
       }
     });
 
@@ -402,16 +377,15 @@ export default function TwitchChat({ channel }: { channel: string }) {
 
                   {/* Message content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       {/* Badges */}
                       {m.badges.map((badge, idx) => (
-                        <span
+                        <div
                           key={`${badge.setID}-${badge.version}-${idx}`}
-                          className="text-xs"
-                          title={badge.title}
-                        >
-                          {badge.title}
-                        </span>
+                          className="h-4 w-4 bg-cover bg-center bg-no-repeat flex-shrink-0"
+                          style={{ backgroundImage: `url(${badge.imageUrl1x})` }}
+                          title={badge.setID}
+                        />
                       ))}
 
                       {/* Username */}
@@ -421,20 +395,20 @@ export default function TwitchChat({ channel }: { channel: string }) {
                         onClick={() => handleReply(m)}
                         title="Click to reply"
                       >
-                        {m.displayName}
+                        {m.displayName}:
                       </span>
                     </div>
 
                     {/* Message text with emotes */}
-                    <div className="mt-1 flex flex-wrap items-center gap-1 leading-relaxed">
+                    <div className="mt-0.5 leading-relaxed">
                       {messageParts.map((part, idx) => {
                         if (part.type === 'emote' && part.emoteUrl) {
                           return (
                             <span
                               key={idx}
-                              className="inline-block h-7 w-7 bg-cover bg-center bg-no-repeat align-middle"
+                              className="inline-block h-7 w-7 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
                               style={{ backgroundImage: `url(${part.emoteUrl})` }}
-                              title={part.emoteName || part.content}
+                              title={part.content}
                             />
                           );
                         } else {
