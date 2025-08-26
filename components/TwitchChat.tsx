@@ -349,7 +349,6 @@ export default function TwitchChat({ channel }: { channel: string }) {
   // Parse message with emotes
   const parseMessage = useCallback((message: Msg) => {
     let text = message.text;
-    const parts: Array<{ type: 'text' | 'emote'; content: string; emoteUrl?: string }> = [];
     
     // Handle Twitch emotes first
     const twitchEmoteRanges: Array<{ start: number; end: number; id: string }> = [];
@@ -371,10 +370,19 @@ export default function TwitchChat({ channel }: { channel: string }) {
       text = before + ` __TWITCH_${id}__ ` + after;
     });
 
-    // Split by spaces and process each word
-    const words = text.split(' ').filter(w => w.length > 0);
+    // Split by spaces but preserve the structure
+    const words = text.split(' ');
+    const parts: Array<{ type: 'text' | 'emote'; content: string; emoteUrl?: string }> = [];
     
     words.forEach((word, index) => {
+      if (word.trim() === '') {
+        // Skip empty strings but preserve single spaces
+        if (index < words.length - 1) {
+          parts.push({ type: 'text', content: ' ' });
+        }
+        return;
+      }
+
       if (word.startsWith('__TWITCH_') && word.endsWith('__')) {
         const emoteId = word.match(/__TWITCH_(\d+)__/)?.[1];
         if (emoteId) {
@@ -403,7 +411,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
         });
       }
       
-      // Add space after each part except the last
+      // Add space after each word except the last
       if (index < words.length - 1) {
         parts.push({ type: 'text', content: ' ' });
       }
