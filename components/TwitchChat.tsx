@@ -6,9 +6,7 @@ import { connectChat } from "@/lib/twitch/chat";
 type Badge = {
   setID: string;
   version: string;
-  imageUrl1x: string;
-  imageUrl2x: string;
-  imageUrl4x: string;
+  emoji: string;
   title: string;
 };
 
@@ -20,9 +18,6 @@ type Emote = {
     "2": string;
     "4": string;
   };
-  format?: string[];
-  scale?: string[];
-  theme_mode?: string[];
 };
 
 type Msg = {
@@ -49,7 +44,6 @@ export default function TwitchChat({ channel }: { channel: string }) {
   const [replyingTo, setReplyingTo] = useState<Msg | null>(null);
   const [bttvEmotes, setBttvEmotes] = useState<{ [key: string]: Emote }>({});
   const [ffzEmotes, setFfzEmotes] = useState<{ [key: string]: Emote }>({});
-  const [channelId, setChannelId] = useState<string>("");
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -57,26 +51,61 @@ export default function TwitchChat({ channel }: { channel: string }) {
   const oauth = process.env.NEXT_PUBLIC_TWITCH_CHAT_OAUTH || process.env.TWITCH_CHAT_OAUTH;
   const canSend = !!username && !!oauth;
 
+  // Enhanced badge mapping with more emojis
+  const getBadgeEmoji = (setID: string, version: string): string | null => {
+    const badgeMap: { [key: string]: { [version: string]: string } | string } = {
+      broadcaster: "👑",
+      moderator: "🗡️",
+      subscriber: "⭐",
+      vip: "💎",
+      premium: "💜",
+      turbo: "⚡",
+      staff: "🛡️",
+      admin: "👨‍💼",
+      global_mod: "🌐",
+      founder: "🏆",
+      artist: "🎨",
+      partner: "✅",
+      verified: "✔️",
+      bits: "💰",
+      "bits-leader": "🥇",
+      "sub-gifter": "🎁",
+      "moments": "📸",
+      "clip-champ": "🏅"
+    };
+
+    const badge = badgeMap[setID];
+    if (typeof badge === 'string') return badge;
+    if (typeof badge === 'object' && badge[version]) return badge[version];
+    
+    // Default subscriber tiers
+    if (setID === 'subscriber') {
+      const months = parseInt(version) || 0;
+      if (months >= 24) return "⭐⭐⭐";
+      if (months >= 12) return "⭐⭐";
+      return "⭐";
+    }
+    
+    return null;
+  };
+
   // Fetch BTTV emotes
-  const fetchBttvEmotes = useCallback(async (channelName: string, roomId?: string) => {
+  const fetchBttvEmotes = useCallback(async (channelName: string) => {
     try {
-      // Global BTTV emotes
-      const globalRes = await fetch("https://api.betterttv.net/3/cached/emotes/global");
+      const [globalRes, channelRes] = await Promise.all([
+        fetch("https://api.betterttv.net/3/cached/emotes/global"),
+        fetch(`https://api.betterttv.net/3/cached/users/twitch/${channelName}`).catch(() => null)
+      ]);
+
       const globalEmotes = await globalRes.json();
-      
-      let channelEmotes: any[] = [];
-      if (roomId) {
-        try {
-          const channelRes = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${roomId}`);
-          const channelData = await channelRes.json();
-          channelEmotes = [...(channelData.channelEmotes || []), ...(channelData.sharedEmotes || [])];
-        } catch (e) {
-          console.log("No BTTV channel emotes found");
-        }
+      let channelData = null;
+      if (channelRes?.ok) {
+        channelData = await channelRes.json();
       }
 
       const allBttvEmotes: { [key: string]: Emote } = {};
-      [...globalEmotes, ...channelEmotes].forEach((emote: any) => {
+      
+      globalEmotes.forEach((emote: any) => {
         allBttvEmotes[emote.code] = {
           id: emote.id,
           name: emote.code,
@@ -87,6 +116,20 @@ export default function TwitchChat({ channel }: { channel: string }) {
           }
         };
       });
+
+      if (channelData) {
+        [...(channelData.channelEmotes || []), ...(channelData.sharedEmotes || [])].forEach((emote: any) => {
+          allBttvEmotes[emote.code] = {
+            id: emote.id,
+            name: emote.code,
+            urls: {
+              "1": `https://cdn.betterttv.net/emote/${emote.id}/1x`,
+              "2": `https://cdn.betterttv.net/emote/${emote.id}/2x`,
+              "4": `https://cdn.betterttv.net/emote/${emote.id}/3x`,
+            }
+          };
+        });
+      }
       
       setBttvEmotes(allBttvEmotes);
     } catch (e) {
@@ -95,25 +138,22 @@ export default function TwitchChat({ channel }: { channel: string }) {
   }, []);
 
   // Fetch FFZ emotes
-  const fetchFfzEmotes = useCallback(async (channelName: string, roomId?: string) => {
+  const fetchFfzEmotes = useCallback(async (channelName: string) => {
     try {
-      // Global FFZ emotes
-      const globalRes = await fetch("https://api.frankerfacez.com/v1/set/global");
+      const [globalRes, channelRes] = await Promise.all([
+        fetch("https://api.frankerfacez.com/v1/set/global"),
+        fetch(`https://api.frankerfacez.com/v1/room/${channelName}`).catch(() => null)
+      ]);
+
       const globalData = await globalRes.json();
-      
-      let channelData: any = null;
-      if (roomId) {
-        try {
-          const channelRes = await fetch(`https://api.frankerfacez.com/v1/room/${channelName}`);
-          channelData = await channelRes.json();
-        } catch (e) {
-          console.log("No FFZ channel emotes found");
-        }
+      let channelData = null;
+      if (channelRes?.ok) {
+        channelData = await channelRes.json();
       }
 
       const allFfzEmotes: { [key: string]: Emote } = {};
       
-      // Add global emotes
+      // Global emotes
       Object.values(globalData.sets || {}).forEach((set: any) => {
         Object.values(set.emoticons || {}).forEach((emote: any) => {
           allFfzEmotes[emote.name] = {
@@ -128,7 +168,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
         });
       });
 
-      // Add channel emotes
+      // Channel emotes
       if (channelData?.sets) {
         Object.values(channelData.sets).forEach((set: any) => {
           Object.values(set.emoticons || {}).forEach((emote: any) => {
@@ -151,24 +191,9 @@ export default function TwitchChat({ channel }: { channel: string }) {
     }
   }, []);
 
-  // Get channel ID for emote fetching
   useEffect(() => {
-    const fetchChannelId = async () => {
-      try {
-        const res = await fetch(`/api/channel/${channel}`);
-        const data = await res.json();
-        if (data.user?.id) {
-          setChannelId(data.user.id);
-          fetchBttvEmotes(channel, data.user.id);
-          fetchFfzEmotes(channel, data.user.id);
-        }
-      } catch (e) {
-        console.error("Failed to fetch channel ID:", e);
-        fetchBttvEmotes(channel);
-        fetchFfzEmotes(channel);
-      }
-    };
-    fetchChannelId();
+    fetchBttvEmotes(channel);
+    fetchFfzEmotes(channel);
   }, [channel, fetchBttvEmotes, fetchFfzEmotes]);
 
   useEffect(() => {
@@ -181,14 +206,15 @@ export default function TwitchChat({ channel }: { channel: string }) {
       const badges: Badge[] = [];
       if (tags.badges) {
         Object.entries(tags.badges).forEach(([setID, version]: [string, any]) => {
-          badges.push({
-            setID,
-            version: version.toString(),
-            imageUrl1x: `https://static-cdn.jtvnw.net/badges/v1/${setID}/${version}/1`,
-            imageUrl2x: `https://static-cdn.jtvnw.net/badges/v1/${setID}/${version}/2`,
-            imageUrl4x: `https://static-cdn.jtvnw.net/badges/v1/${setID}/${version}/3`,
-            title: setID
-          });
+          const emoji = getBadgeEmoji(setID, version.toString());
+          if (emoji) {
+            badges.push({
+              setID,
+              version: version.toString(),
+              emoji,
+              title: setID
+            });
+          }
         });
       }
 
@@ -207,7 +233,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
       const isMention = Boolean(username && msg.toLowerCase().includes(`@${username.toLowerCase()}`));
 
       setMessages((m) => [
-        ...m.slice(-99), // Keep last 99 messages for performance
+        ...m.slice(-99),
         {
           id: tags.id || Date.now().toString(),
           user: tags.username || "",
@@ -250,7 +276,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
       });
     });
     
-    // Sort by start position (reverse to replace from end to start)
+    // Sort by start position (reverse to replace from end to start)  
     twitchEmoteRanges.sort((a, b) => b.start - a.start);
     
     // Replace Twitch emotes with placeholders
@@ -258,17 +284,16 @@ export default function TwitchChat({ channel }: { channel: string }) {
       const emoteName = text.substring(start, end + 1);
       const before = text.substring(0, start);
       const after = text.substring(end + 1);
-      text = before + `__TWITCH_EMOTE_${id}_${emoteName}__` + after;
+      text = before + ` __TWITCH_${id}__ ` + after;
     });
 
     // Split by spaces and process each word
-    const words = text.split(' ');
+    const words = text.split(' ').filter(w => w.length > 0);
     
     words.forEach((word, index) => {
-      if (word.startsWith('__TWITCH_EMOTE_')) {
-        const match = word.match(/__TWITCH_EMOTE_(\d+)_(.+)__/);
-        if (match) {
-          const [, emoteId] = match;
+      if (word.startsWith('__TWITCH_') && word.endsWith('__')) {
+        const emoteId = word.match(/__TWITCH_(\d+)__/)?.[1];
+        if (emoteId) {
           parts.push({
             type: 'emote',
             content: word,
@@ -293,12 +318,18 @@ export default function TwitchChat({ channel }: { channel: string }) {
           content: word
         });
       }
+      
+      // Add space after each part except the last
+      if (index < words.length - 1) {
+        parts.push({ type: 'text', content: ' ' });
+      }
     });
 
     return parts;
   }, [bttvEmotes, ffzEmotes]);
 
   const handleReply = (message: Msg) => {
+    if (!canSend) return;
     setReplyingTo(message);
     setInput(`@${message.displayName} `);
   };
@@ -314,7 +345,6 @@ export default function TwitchChat({ channel }: { channel: string }) {
     
     let messageToSend = input.trim();
     if (replyingTo) {
-      // Twitch reply format
       messageToSend = `@${replyingTo.displayName} ${messageToSend}`;
     }
     
@@ -331,67 +361,98 @@ export default function TwitchChat({ channel }: { channel: string }) {
     });
   };
 
+  // Enhanced user color - make colors more vibrant
+  const enhanceUserColor = (color?: string) => {
+    if (!color) return '#e0e6ed';
+    
+    // Brighten dark colors
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // If color is too dark, brighten it
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    if (brightness < 120) {
+      const factor = 1.8;
+      return `rgb(${Math.min(255, r * factor)}, ${Math.min(255, g * factor)}, ${Math.min(255, b * factor)})`;
+    }
+    
+    return color;
+  };
+
   return (
-    <div className="flex h-full flex-col bg-surface">
+    <div className="flex h-full flex-col bg-gray-900 overflow-hidden rounded-xl">
       {/* Header */}
-      <div className="border-b border-white/10 p-3">
+      <div className="bg-gray-800/80 backdrop-blur border-b border-gray-700/50 p-3 rounded-t-xl">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-red-500"></div>
-          <span className="text-sm font-medium">LIVE CHAT</span>
+          <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
+          <span className="text-sm font-bold text-white tracking-wide">LIVE CHAT</span>
+          <div className="ml-auto text-xs text-gray-400">{messages.length} messages</div>
         </div>
       </div>
 
       {/* Messages */}
-      <div ref={listRef} className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20">
-        <div className="space-y-1 p-2">
+      <div 
+        ref={listRef} 
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+        }}
+      >
+        <div className="p-2 space-y-2">
           {messages.map((m) => {
             const messageParts = parseMessage(m);
+            const userColor = enhanceUserColor(m.color);
+            
             return (
               <div 
                 key={m.id} 
-                className={`group relative rounded-lg p-2 transition-colors hover:bg-white/5 ${
-                  m.isMention ? 'bg-purple-500/20 border-l-2 border-purple-500' : ''
+                className={`group relative rounded-lg p-3 transition-all duration-200 hover:bg-gray-800/50 ${
+                  m.isMention ? 'bg-purple-900/30 border-l-4 border-purple-500 shadow-lg' : ''
                 }`}
               >
                 {/* Reply indicator */}
                 {m.replyTo && (
-                  <div className="mb-1 flex items-center gap-1 text-xs text-text-muted">
-                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="mb-2 flex items-center gap-2 text-xs text-gray-400 bg-gray-800/50 rounded-lg p-2">
+                    <svg className="h-3 w-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414L2.586 8l3.707-3.707a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span>replying to</span>
-                    <span className="font-medium" style={{ color: m.replyTo.user === channel ? '#9146ff' : undefined }}>
+                    <span>Replying to</span>
+                    <span className="font-semibold text-white">
                       {m.replyTo.displayName}
                     </span>
-                    <span className="truncate max-w-32">
-                      {m.replyTo.message.length > 30 ? `${m.replyTo.message.substring(0, 30)}...` : m.replyTo.message}
+                    <span className="truncate max-w-32 text-gray-300">
+                      {m.replyTo.message.length > 25 ? `${m.replyTo.message.substring(0, 25)}...` : m.replyTo.message}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-3">
                   {/* Timestamp */}
-                  <span className="mt-0.5 text-xs text-text-muted opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="mt-1 text-xs text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 font-mono">
                     {formatTime(m.timestamp)}
                   </span>
 
                   {/* Message content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1 flex-wrap">
+                    <div className="flex items-center gap-1.5 mb-1">
                       {/* Badges */}
                       {m.badges.map((badge, idx) => (
-                        <div
+                        <span
                           key={`${badge.setID}-${badge.version}-${idx}`}
-                          className="h-4 w-4 bg-cover bg-center bg-no-repeat flex-shrink-0"
-                          style={{ backgroundImage: `url(${badge.imageUrl1x})` }}
-                          title={badge.setID}
-                        />
+                          className="text-sm"
+                          title={`${badge.setID} (${badge.version})`}
+                        >
+                          {badge.emoji}
+                        </span>
                       ))}
 
                       {/* Username */}
                       <span 
-                        className="font-semibold cursor-pointer hover:underline" 
-                        style={{ color: m.color || '#ffffff' }}
+                        className="font-bold cursor-pointer hover:underline transition-all duration-150" 
+                        style={{ color: userColor }}
                         onClick={() => handleReply(m)}
                         title="Click to reply"
                       >
@@ -400,7 +461,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
                     </div>
 
                     {/* Message text with emotes */}
-                    <div className="mt-0.5 leading-relaxed">
+                    <div className="leading-relaxed text-gray-100 break-words">
                       {messageParts.map((part, idx) => {
                         if (part.type === 'emote' && part.emoteUrl) {
                           return (
@@ -415,7 +476,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
                           // Handle mentions highlighting
                           if (part.content.startsWith('@')) {
                             return (
-                              <span key={idx} className="text-purple-400 hover:text-purple-300">
+                              <span key={idx} className="text-purple-400 font-semibold hover:text-purple-300 transition-colors">
                                 {part.content}
                               </span>
                             );
@@ -427,15 +488,17 @@ export default function TwitchChat({ channel }: { channel: string }) {
                   </div>
 
                   {/* Reply button */}
-                  <button
-                    onClick={() => handleReply(m)}
-                    className="opacity-0 transition-opacity group-hover:opacity-100 rounded p-1 hover:bg-white/10"
-                    title="Reply"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                    </svg>
-                  </button>
+                  {canSend && (
+                    <button
+                      onClick={() => handleReply(m)}
+                      className="opacity-0 transition-opacity group-hover:opacity-100 rounded-lg p-2 hover:bg-gray-700/50 text-gray-400 hover:text-white"
+                      title="Reply"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -444,51 +507,58 @@ export default function TwitchChat({ channel }: { channel: string }) {
       </div>
 
       {/* Input section */}
-      {canSend && (
-        <div className="border-t border-white/10">
-          {/* Reply indicator */}
-          {replyingTo && (
-            <div className="flex items-center justify-between bg-white/5 p-2 text-xs">
-              <div className="flex items-center gap-2 text-text-muted">
-                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414L2.586 8l3.707-3.707a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <span>Replying to</span>
-                <span className="font-medium" style={{ color: replyingTo.color || '#ffffff' }}>
-                  {replyingTo.displayName}
-                </span>
-              </div>
-              <button
-                onClick={cancelReply}
-                className="rounded hover:bg-white/10 p-1"
-                title="Cancel reply"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+      <div className="border-t border-gray-700/50 bg-gray-800/60 backdrop-blur rounded-b-xl">
+        {/* Reply indicator */}
+        {replyingTo && (
+          <div className="flex items-center justify-between bg-gray-700/50 p-3 text-xs">
+            <div className="flex items-center gap-2 text-gray-300">
+              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414L2.586 8l3.707-3.707a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Replying to</span>
+              <span className="font-bold text-white">
+                {replyingTo.displayName}
+              </span>
             </div>
-          )}
+            <button
+              onClick={cancelReply}
+              className="rounded-lg hover:bg-gray-600/50 p-1.5 text-gray-400 hover:text-white transition-colors"
+              title="Cancel reply"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
 
-          {/* Input form */}
-          <form onSubmit={onSubmit} className="flex gap-2 p-3">
+        {/* Input form */}
+        {canSend ? (
+          <form onSubmit={onSubmit} className="flex gap-3 p-3">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="flex-1 rounded-lg bg-bg px-3 py-2 text-sm outline-none ring-purple-500/50 focus:ring-1 placeholder:text-text-muted"
+              className="flex-1 rounded-lg bg-gray-800 border border-gray-600/50 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-gray-400 transition-all duration-200"
               placeholder={replyingTo ? `Reply to ${replyingTo.displayName}...` : "Send a message..."}
               maxLength={500}
             />
             <button 
               type="submit" 
               disabled={!input.trim()}
-              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:from-purple-500 hover:to-purple-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-purple-500/25"
             >
               Send
             </button>
           </form>
-        </div>
-      )}
+        ) : (
+          <div className="p-3 text-center">
+            <div className="bg-gray-800 border border-gray-600/50 rounded-lg p-4">
+              <p className="text-gray-300 font-medium">Please log in to chat</p>
+              <p className="text-xs text-gray-500 mt-1">We'll add the login feature soon!</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
