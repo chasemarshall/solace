@@ -33,15 +33,18 @@ export async function loadTwitchSDK(): Promise<any> {
     
     const handleLoad = () => {
       cleanup();
-      if ((window as any).Twitch) {
-        twitchSDK = (window as any).Twitch;
-        console.log("Twitch SDK loaded successfully");
-        resolve(twitchSDK);
-      } else {
-        const error = new Error("Twitch SDK loaded but not available on window");
-        console.error(error);
-        reject(error);
-      }
+      // Give a small delay for the SDK to initialize
+      setTimeout(() => {
+        if ((window as any).Twitch) {
+          twitchSDK = (window as any).Twitch;
+          console.log("Twitch SDK loaded successfully");
+          resolve(twitchSDK);
+        } else {
+          const error = new Error("Twitch SDK loaded but not available on window");
+          console.error(error);
+          reject(error);
+        }
+      }, 100);
     };
     
     const handleError = () => {

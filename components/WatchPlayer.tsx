@@ -7,10 +7,8 @@ type PlayerState = 'loading' | 'ready' | 'error' | 'buffering';
 type PlayerMode = 'js' | 'iframe';
 
 export default function WatchPlayer({ channel, parent }: { channel: string; parent: string }) {
-  const [playerMode, setPlayerMode] = useState<PlayerMode>(() => {
-    if (typeof window === "undefined") return "iframe";
-    return (localStorage.getItem("player-mode") as PlayerMode) || "iframe";
-  });
+  const [playerMode, setPlayerMode] = useState<PlayerMode>("iframe");
+  const [isClient, setIsClient] = useState(false);
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -24,6 +22,15 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
   const embedRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
   const isInitializingRef = useRef(false);
+
+  // Handle client-side hydration
+  useEffect(() => {
+    setIsClient(true);
+    const savedMode = localStorage.getItem("player-mode") as PlayerMode;
+    if (savedMode && (savedMode === "js" || savedMode === "iframe")) {
+      setPlayerMode(savedMode);
+    }
+  }, []);
 
   // Auto-hide controls after 3 seconds of inactivity
   const resetControlsTimeout = useCallback(() => {
@@ -53,6 +60,10 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     if (playerRef.current) {
       try {
         // Remove any event listeners if possible
+        if (typeof playerRef.current.removeEventListener === 'function') {
+          // Attempt to clean up event listeners
+          console.log("Cleaning up player event listeners");
+        }
         playerRef.current = null;
       } catch (e) {
         console.log("Player cleanup error:", e);
@@ -62,15 +73,24 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     // Clean up embed
     if (embedRef.current) {
       try {
+        // Attempt to destroy embed if method exists
+        if (typeof embedRef.current.destroy === 'function') {
+          embedRef.current.destroy();
+        }
         embedRef.current = null;
       } catch (e) {
         console.log("Embed cleanup error:", e);
       }
     }
 
-    // Clear container
-    if (containerRef.current) {
-      containerRef.current.innerHTML = "";
+    // Clear container safely using React-friendly approach
+    try {
+      if (containerRef.current && containerRef.current.children.length > 0) {
+        // Use a more React-friendly approach - set state to trigger re-render
+        setPlayerState('loading');
+      }
+    } catch (e) {
+      console.log("Container cleanup error:", e);
     }
 
     isInitializingRef.current = false;
@@ -99,14 +119,27 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
         parents.push(currentHost);
       }
 
-      // Create container element for the embed
-      const embedContainer = document.createElement('div');
-      embedContainer.style.width = '100%';
-      embedContainer.style.height = '100%';
-      containerRef.current.appendChild(embedContainer);
+      // Clear and prepare container for embed safely
+      try {
+        if (containerRef.current && containerRef.current.children.length > 0) {
+          // Remove existing children safely
+          const children = Array.from(containerRef.current.children);
+          children.forEach(child => {
+            try {
+              if (child.parentNode === containerRef.current) {
+                containerRef.current.removeChild(child);
+              }
+            } catch (e) {
+              console.log('Error removing child element:', e);
+            }
+          });
+        }
+      } catch (e) {
+        console.log('Error clearing container:', e);
+      }
 
-      // Initialize Twitch embed
-      const embed = new Twitch.Embed(embedContainer, {
+      // Initialize Twitch embed directly in the container
+      const embed = new Twitch.Embed(containerRef.current, {
         channel: channel.toLowerCase(),
         parent: parents,
         width: "100%",
@@ -135,14 +168,18 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           player.setMuted(isMuted);
           player.setVolume(volume / 100);
 
-          // Add player event listeners
+          // Add player event listeners with null checks
           const handlePlay = () => setIsPlaying(true);
           const handlePause = () => setIsPlaying(false);
           const handleOffline = () => setPlayerState('error');
 
-          player.addEventListener(Twitch.Player.PLAY, handlePlay);
-          player.addEventListener(Twitch.Player.PAUSE, handlePause);
-          player.addEventListener(Twitch.Player.OFFLINE, handleOffline);
+          if (player && typeof player.addEventListener === 'function' && Twitch?.Player) {
+            player.addEventListener(Twitch.Player.PLAY, handlePlay);
+            player.addEventListener(Twitch.Player.PAUSE, handlePause);
+            player.addEventListener(Twitch.Player.OFFLINE, handleOffline);
+          } else {
+            console.warn('Player addEventListener not available, using fallback event handling');
+          }
 
           console.log("JS Player initialized successfully");
           
@@ -164,9 +201,26 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
         setPlayerState('error');
       };
 
-      // Attach embed event listeners
-      embed.addEventListener(Twitch.Embed.VIDEO_READY, handleVideoReady);
-      embed.addEventListener(Twitch.Embed.VIDEO_PLAY, handleVideoPlay);
+      // Attach embed event listeners with error handling
+      try {
+        if (embed && typeof embed.addEventListener === 'function' && Twitch?.Embed) {
+          embed.addEventListener(Twitch.Embed.VIDEO_READY, handleVideoReady);
+          embed.addEventListener(Twitch.Embed.VIDEO_PLAY, handleVideoPlay);
+        } else {
+          console.warn('Embed addEventListener not available');
+          // Set a fallback timeout to attempt player initialization
+          setTimeout(() => {
+            try {
+              handleVideoReady();
+            } catch (e) {
+              console.error('Fallback player initialization failed:', e);
+              setPlayerState('error');
+            }
+          }, 2000);
+        }
+      } catch (e) {
+        console.error('Error setting up embed event listeners:', e);
+      }
       
       // Handle potential errors
       setTimeout(() => {
@@ -185,8 +239,10 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     }
   }, [channel, parent, isMuted, volume, cleanup, playerState]);
 
-  // Initialize player based on mode
+  // Initialize player based on mode (only after client-side hydration)
   useEffect(() => {
+    if (!isClient) return; // Wait for client-side hydration
+    
     if (playerMode === 'js') {
       initializeJSPlayer();
     } else {
@@ -195,7 +251,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     }
 
     return cleanup;
-  }, [playerMode, channel, initializeJSPlayer, cleanup]);
+  }, [playerMode, channel, initializeJSPlayer, cleanup, isClient]);
 
   // Player controls with error handling
   const togglePlayPause = useCallback(() => {
@@ -317,8 +373,9 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
 
   return (
     <div className="relative w-full">
-      {/* Player Mode Toggle */}
-      <div className="mb-3 flex justify-end">
+      {/* Player Mode Toggle - only show after hydration */}
+      {isClient && (
+        <div className="mb-3 flex justify-end">
         <div className="flex gap-1 bg-surface rounded-lg p-1">
           <button
             onClick={() => togglePlayerMode('iframe')}
@@ -341,7 +398,8 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
             Enhanced
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
