@@ -20,9 +20,17 @@ Set env vars:
 - TWITCH_CLIENT_ID
 - TWITCH_CLIENT_SECRET
 - NEXT_PUBLIC_BASE_URL (e.g., https://your.domain or http://localhost:8080)
-- NEXT_PUBLIC_TWITCH_PARENT (your public hostname for Twitch embed)
+- NEXT_PUBLIC_TWITCH_PARENT (comma-separated hostnames for Twitch embed)
+- TWITCH_CHAT_USERNAME (optional, enables sending chat)
+- TWITCH_CHAT_OAUTH (optional, format: oauth:xxxx)
 
 > Twitch Player & Chat iframes require the `parent` query param to match your public host.
+
+## Troubleshooting
+
+- **Blank player / CSP errors**: ensure your domain is listed in `NEXT_PUBLIC_TWITCH_PARENT`.
+- **iOS playback stuck**: the JS player starts muted to allow autoplay. Use the *Unmute* button.
+- **Can't send chat messages**: set `TWITCH_CHAT_USERNAME` and `TWITCH_CHAT_OAUTH` in your `.env`.
 
 ## Included
 - Home: Now Live grid (infinite scroll)
