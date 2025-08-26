@@ -45,6 +45,8 @@ export default function TwitchChat({ channel }: { channel: string }) {
   const [bttvEmotes, setBttvEmotes] = useState<{ [key: string]: Emote }>({});
   const [ffzEmotes, setFfzEmotes] = useState<{ [key: string]: Emote }>({});
   const [channelId, setChannelId] = useState<string>("");
+  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -308,10 +310,41 @@ export default function TwitchChat({ channel }: { channel: string }) {
 
   useEffect(() => {
     const el = listRef.current;
-    if (el) {
+    if (el && isAutoScrolling) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isAutoScrolling]);
+
+  // Handle scroll detection
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
+      
+      if (!isNearBottom && isAutoScrolling) {
+        setIsAutoScrolling(false);
+        setShowScrollButton(true);
+      } else if (isNearBottom && !isAutoScrolling) {
+        setIsAutoScrolling(true);
+        setShowScrollButton(false);
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [isAutoScrolling]);
+
+  const scrollToBottom = () => {
+    const el = listRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+      setIsAutoScrolling(true);
+      setShowScrollButton(false);
+    }
+  };
 
   // Parse message with emotes
   const parseMessage = useCallback((message: Msg) => {
@@ -459,7 +492,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
 
                   {/* Username line (only show if not same user or has reply) */}
                   {(!sameUser || m.replyTo) && (
-                    <div className="flex items-center gap-1.5 mb-0.5">
+                    <div className="flex items-center gap-1.5">
                       {/* Badges */}
                       {m.badges.map((badge, idx) => (
                         <span
@@ -471,7 +504,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
                         </span>
                       ))}
 
-                      {/* Username */}
+                      {/* Username with inline message */}
                       <span 
                         className="font-bold cursor-pointer hover:underline transition-all duration-150 text-sm" 
                         style={{ color: enhanceUserColor(m.color) }}
@@ -480,34 +513,62 @@ export default function TwitchChat({ channel }: { channel: string }) {
                       >
                         {m.displayName}:
                       </span>
+                      
+                      {/* Message text inline with username */}
+                      <span className="leading-relaxed text-text break-words text-sm">
+                        {messageParts.map((part, idx) => {
+                          if (part.type === 'emote' && part.emoteUrl) {
+                            return (
+                              <span
+                                key={idx}
+                                className="inline-block h-6 w-6 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
+                                style={{ backgroundImage: `url(${part.emoteUrl})` }}
+                                title={part.content}
+                              />
+                            );
+                          } else {
+                            // Handle mentions highlighting
+                            if (part.content.startsWith('@')) {
+                              return (
+                                <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
+                                  {part.content}
+                                </span>
+                              );
+                            }
+                            return <span key={idx}>{part.content}</span>;
+                          }
+                        })}
+                      </span>
                     </div>
                   )}
 
-                  {/* Message text with emotes */}
-                  <div className="leading-relaxed text-text break-words text-sm">
-                    {messageParts.map((part, idx) => {
-                      if (part.type === 'emote' && part.emoteUrl) {
-                        return (
-                          <span
-                            key={idx}
-                            className="inline-block h-6 w-6 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
-                            style={{ backgroundImage: `url(${part.emoteUrl})` }}
-                            title={part.content}
-                          />
-                        );
-                      } else {
-                        // Handle mentions highlighting
-                        if (part.content.startsWith('@')) {
+                  {/* For grouped messages (same user), show message without username */}
+                  {sameUser && !m.replyTo && (
+                    <div className="leading-relaxed text-text break-words text-sm ml-6">
+                      {messageParts.map((part, idx) => {
+                        if (part.type === 'emote' && part.emoteUrl) {
                           return (
-                            <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
-                              {part.content}
-                            </span>
+                            <span
+                              key={idx}
+                              className="inline-block h-6 w-6 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
+                              style={{ backgroundImage: `url(${part.emoteUrl})` }}
+                              title={part.content}
+                            />
                           );
+                        } else {
+                          // Handle mentions highlighting
+                          if (part.content.startsWith('@')) {
+                            return (
+                              <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
+                                {part.content}
+                              </span>
+                            );
+                          }
+                          return <span key={idx}>{part.content}</span>;
                         }
-                        return <span key={idx}>{part.content}</span>;
-                      }
-                    })}
-                  </div>
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Reply button on the right */}
