@@ -401,73 +401,80 @@ export default function TwitchChat({ channel }: { channel: string }) {
           scrollbarColor: 'rgba(255,255,255,0.3) transparent'
         }}
       >
-        <div className="p-2 space-y-2">
-          {messages.map((m) => {
+        <div className="p-1 space-y-0.5">
+          {messages.map((m, msgIndex) => {
             const messageParts = parseMessage(m);
             const userColor = enhanceUserColor(m.color);
+            
+            // Check if this message is from same user as previous (for grouping)
+            const prevMsg = messages[msgIndex - 1];
+            const sameUser = prevMsg && prevMsg.user === m.user && 
+              (m.timestamp.getTime() - prevMsg.timestamp.getTime()) < 60000; // Within 1 minute
             
             return (
               <div 
                 key={m.id} 
-                className={`group relative rounded-lg p-3 transition-all duration-200 hover:bg-gray-800/50 ${
-                  m.isMention ? 'bg-purple-900/30 border-l-4 border-purple-500 shadow-lg' : ''
+                className={`group relative px-3 py-1.5 transition-all duration-150 hover:bg-gray-800/40 ${
+                  m.isMention ? 'bg-purple-900/20 border-l-2 border-purple-400' : ''
                 }`}
               >
                 {/* Reply indicator */}
                 {m.replyTo && (
-                  <div className="mb-2 flex items-center gap-2 text-xs text-gray-400 bg-gray-800/50 rounded-lg p-2">
-                    <svg className="h-3 w-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="mb-1 flex items-center gap-1.5 text-xs text-gray-500">
+                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414L2.586 8l3.707-3.707a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <span>Replying to</span>
-                    <span className="font-semibold text-white">
+                    <span className="font-medium text-gray-400">
                       {m.replyTo.displayName}
                     </span>
-                    <span className="truncate max-w-32 text-gray-300">
-                      {m.replyTo.message.length > 25 ? `${m.replyTo.message.substring(0, 25)}...` : m.replyTo.message}
+                    <span className="truncate max-w-40 text-gray-500">
+                      {m.replyTo.message.length > 30 ? `${m.replyTo.message.substring(0, 30)}...` : m.replyTo.message}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-start gap-3">
-                  {/* Timestamp */}
-                  <span className="mt-1 text-xs text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 font-mono">
+                <div className="flex items-start gap-2">
+                  {/* Timestamp (only on hover) */}
+                  <span className="mt-0.5 text-xs text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 font-mono min-w-[35px]">
                     {formatTime(m.timestamp)}
                   </span>
 
                   {/* Message content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      {/* Badges */}
-                      {m.badges.map((badge, idx) => (
-                        <span
-                          key={`${badge.setID}-${badge.version}-${idx}`}
-                          className="text-sm"
-                          title={`${badge.setID} (${badge.version})`}
-                        >
-                          {badge.emoji}
-                        </span>
-                      ))}
+                    {/* Username line (only show if not same user or has reply) */}
+                    {(!sameUser || m.replyTo) && (
+                      <div className="flex items-center gap-1 mb-0.5">
+                        {/* Badges */}
+                        {m.badges.map((badge, idx) => (
+                          <span
+                            key={`${badge.setID}-${badge.version}-${idx}`}
+                            className="text-sm leading-none"
+                            title={`${badge.setID}`}
+                          >
+                            {badge.emoji}
+                          </span>
+                        ))}
 
-                      {/* Username */}
-                      <span 
-                        className="font-bold cursor-pointer hover:underline transition-all duration-150" 
-                        style={{ color: userColor }}
-                        onClick={() => handleReply(m)}
-                        title="Click to reply"
-                      >
-                        {m.displayName}:
-                      </span>
-                    </div>
+                        {/* Username */}
+                        <span 
+                          className="font-bold cursor-pointer hover:underline transition-all duration-150 text-sm" 
+                          style={{ color: userColor }}
+                          onClick={() => handleReply(m)}
+                          title="Click to reply"
+                        >
+                          {m.displayName}:
+                        </span>
+                      </div>
+                    )}
 
                     {/* Message text with emotes */}
-                    <div className="leading-relaxed text-gray-100 break-words">
+                    <div className="leading-relaxed text-gray-100 break-words text-sm">
                       {messageParts.map((part, idx) => {
                         if (part.type === 'emote' && part.emoteUrl) {
                           return (
                             <span
                               key={idx}
-                              className="inline-block h-7 w-7 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
+                              className="inline-block h-6 w-6 bg-cover bg-center bg-no-repeat align-middle mx-0.5"
                               style={{ backgroundImage: `url(${part.emoteUrl})` }}
                               title={part.content}
                             />
@@ -476,7 +483,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
                           // Handle mentions highlighting
                           if (part.content.startsWith('@')) {
                             return (
-                              <span key={idx} className="text-purple-400 font-semibold hover:text-purple-300 transition-colors">
+                              <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
                                 {part.content}
                               </span>
                             );
@@ -491,10 +498,10 @@ export default function TwitchChat({ channel }: { channel: string }) {
                   {canSend && (
                     <button
                       onClick={() => handleReply(m)}
-                      className="opacity-0 transition-opacity group-hover:opacity-100 rounded-lg p-2 hover:bg-gray-700/50 text-gray-400 hover:text-white"
+                      className="opacity-0 transition-opacity group-hover:opacity-100 rounded p-1 hover:bg-gray-700/50 text-gray-500 hover:text-gray-300"
                       title="Reply"
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                       </svg>
                     </button>
@@ -554,7 +561,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
           <div className="p-3 text-center">
             <div className="bg-gray-800 border border-gray-600/50 rounded-lg p-4">
               <p className="text-gray-300 font-medium">Please log in to chat</p>
-              <p className="text-xs text-gray-500 mt-1">We'll add the login feature soon!</p>
+              <p className="text-xs text-gray-500 mt-1">We&apos;ll add the login feature soon!</p>
             </div>
           </div>
         )}
