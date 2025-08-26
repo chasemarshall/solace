@@ -8,8 +8,8 @@ type PlayerMode = 'js' | 'iframe';
 
 export default function WatchPlayer({ channel, parent }: { channel: string; parent: string }) {
   const [playerMode, setPlayerMode] = useState<PlayerMode>(() => {
-    if (typeof window === "undefined") return "js";
-    return (localStorage.getItem("player-mode") as PlayerMode) || "js";
+    if (typeof window === "undefined") return "iframe";
+    return (localStorage.getItem("player-mode") as PlayerMode) || "iframe";
   });
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [isPlaying, setIsPlaying] = useState(false);
@@ -206,36 +206,35 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
   return (
     <div className="relative w-full">
       {/* Player Mode Toggle */}
-      <div className="mb-3 flex justify-between items-center">
-        <div className="flex gap-2 text-sm text-text-muted">
-          <span>Mode:</span>
+      <div className="mb-3 flex justify-end">
+        <div className="flex gap-1 bg-surface rounded-lg p-1">
           <button
-            onClick={togglePlayerMode}
-            className={`px-2 py-1 rounded transition-colors ${
-              playerMode === 'js' 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-surface hover:bg-white/10 text-text-muted'
-            }`}
-          >
-            Enhanced
-          </button>
-          <button
-            onClick={togglePlayerMode}
-            className={`px-2 py-1 rounded transition-colors ${
+            onClick={() => {
+              setPlayerMode('iframe');
+              localStorage.setItem("player-mode", 'iframe');
+            }}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
               playerMode === 'iframe' 
-                ? 'bg-purple-600 text-white' 
-                : 'bg-surface hover:bg-white/10 text-text-muted'
+                ? 'bg-purple-600 text-white shadow-sm' 
+                : 'text-text-muted hover:text-text hover:bg-white/5'
             }`}
           >
             Basic
           </button>
+          <button
+            onClick={() => {
+              setPlayerMode('js');
+              localStorage.setItem("player-mode", 'js');
+            }}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+              playerMode === 'js' 
+                ? 'bg-purple-600 text-white shadow-sm' 
+                : 'text-text-muted hover:text-text hover:bg-white/5'
+            }`}
+          >
+            Enhanced
+          </button>
         </div>
-        
-        {playerMode === 'js' && (
-          <div className="text-xs text-text-muted">
-            Shortcuts: Space (play/pause), M (mute), F (fullscreen), R (reload)
-          </div>
-        )}
       </div>
 
       {/* Error Display */}
@@ -265,7 +264,9 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
             {playerState === 'loading' && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                 <div className="flex flex-col items-center gap-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent bg-gradient-to-r from-red-400 via-yellow-400 via-green-400 via-blue-400 via-indigo-400 to-purple-400 p-0.5">
+                    <div className="rounded-full h-full w-full bg-black"></div>
+                  </div>
                   <div className="text-sm text-text-muted">Loading player...</div>
                 </div>
               </div>
