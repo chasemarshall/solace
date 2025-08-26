@@ -1,43 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { connectChat } from "@/lib/twitch/chat";
 
 type Msg = { id: string; user: string; text: string };
 
 export default function TwitchChat({ channel }: { channel: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
+  const [input, setInput] = useState("");
+  const clientRef = useRef<any>(null);
+  const username = process.env.NEXT_PUBLIC_TWITCH_CHAT_USERNAME || process.env.TWITCH_CHAT_USERNAME;
+  const oauth = process.env.NEXT_PUBLIC_TWITCH_CHAT_OAUTH || process.env.TWITCH_CHAT_OAUTH;
+  const canSend = !!username && !!oauth;
 
   useEffect(() => {
-    let client: any;
-    function init() {
-      const tmi = (window as any).tmi;
-      if (!tmi) return;
-      client = new tmi.Client({ channels: [channel] });
-      client.connect();
-      client.on("message", (_: string, tags: any, msg: string, self: boolean) => {
-        if (self) return;
-        setMessages((m) => [
-          ...m.slice(-100),
-          { id: tags.id || Date.now().toString(), user: tags["display-name"] || tags.username || "", text: msg },
-        ]);
-      });
-    }
-    if (!(window as any).tmi) {
-      const s = document.createElement("script");
-      s.src = "https://unpkg.com/tmi.js@1.8.5/dist/tmi.min.js";
-      s.onload = init;
-      document.body.appendChild(s);
-    } else {
-      init();
-    }
+    const client = connectChat({ channel, username, oauth });
+    clientRef.current = client;
+    client.on("message", (_: string, tags: any, msg: string, self: boolean) => {
+      if (self) return;
+      setMessages((m) => [
+        ...m.slice(-100),
+        { id: tags.id || Date.now().toString(), user: tags["display-name"] || tags.username || "", text: msg },
+      ]);
+    });
     return () => {
-      client?.disconnect();
+      client.disconnect();
+      clientRef.current = null;
     };
-  }, [channel]);
+  }, [channel, username, oauth]);
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientRef.current || !input) return;
+    clientRef.current.say(channel, input);
+    setInput("");
+  };
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto p-2 text-sm space-y-1">
+    <div className="flex h-full flex-col text-sm text-text">
+      <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {messages.map((m) => (
           <div key={m.id}>
             <span className="font-semibold">{m.user}: </span>
@@ -45,6 +46,19 @@ export default function TwitchChat({ channel }: { channel: string }) {
           </div>
         ))}
       </div>
+      {canSend && (
+        <form onSubmit={onSubmit} className="flex gap-2 border-t border-white/5 p-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1 rounded bg-surface p-1"
+            placeholder="Send a message"
+          />
+          <button type="submit" className="rounded bg-surface px-2">
+            Send
+          </button>
+        </form>
+      )}
     </div>
   );
 }
