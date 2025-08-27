@@ -17,7 +17,7 @@ export default async function TestPlayer() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-2">Player Test Page</h1>
         <p className="text-text-muted mb-4">
-          This page helps test the Twitch player implementation. The channel "twitch" is always live.
+          This page helps test the Twitch player implementation. The channel &quot;twitch&quot; is always live.
         </p>
         
         <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4 mb-4">
@@ -40,7 +40,7 @@ export default async function TestPlayer() {
           <li>• If Enhanced mode fails, try Basic mode using the toggle buttons</li>
           <li>• Check browser console for any error messages</li>
           <li>• Ensure your domain is in the NEXT_PUBLIC_TWITCH_PARENT environment variable</li>
-          <li>• Enhanced mode starts muted - use the "Unmute Stream" button</li>
+          <li>• Enhanced mode starts muted - use the &quot;Unmute Stream&quot; button</li>
           <li>• If you see CORS errors, Basic mode will work without restrictions</li>
         </ul>
       </div>
