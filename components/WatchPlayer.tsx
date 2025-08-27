@@ -56,6 +56,13 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     }
   }, []);
 
+  const togglePlayerMode = useCallback((newMode: PlayerMode) => {
+    setPlayerMode(newMode);
+    localStorage.setItem("player-mode", newMode);
+    setError(null);
+    cleanup();
+  }, [cleanup]);
+
   // Initialize JS player
   const initializeJSPlayer = useCallback(async () => {
     if (!containerRef.current) return;
@@ -151,7 +158,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
         setPlayerState('error');
       }
     }
-  }, [channel, parent, cleanup, playerState]);
+  }, [channel, parent, cleanup, playerState, togglePlayerMode]);
 
   // Initialize player based on mode
   useEffect(() => {
@@ -175,13 +182,6 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
       window.location.reload();
     }
   }, [playerMode, initializeJSPlayer]);
-
-  const togglePlayerMode = useCallback((newMode: PlayerMode) => {
-    setPlayerMode(newMode);
-    localStorage.setItem("player-mode", newMode);
-    setError(null);
-    cleanup();
-  }, [cleanup]);
 
   // Get iframe source with proper parent domain
   const iframeParent = parent.split(",")[0] || "localhost";

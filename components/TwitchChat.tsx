@@ -651,6 +651,21 @@ export default function TwitchChat({ channel }: { channel: string }) {
             </div>
           </div>
         )}
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <div className="absolute bottom-20 right-4 z-10">
+            <button
+              onClick={scrollToBottom}
+              className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 shadow-lg transition-all duration-200 hover:scale-110"
+              title="Scroll to bottom"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

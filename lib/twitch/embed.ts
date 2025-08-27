@@ -106,7 +106,7 @@ export async function loadTwitchSDK(): Promise<any> {
     twitchSDKPromise = null;
     loadAttempts++;
     
-    if (loadAttempts < MAX_ATTEMPTS && !error.message.includes('CORS')) {
+    if (loadAttempts < MAX_ATTEMPTS && !(error instanceof Error && error.message.includes('CORS'))) {
       console.log(`Twitch SDK load attempt ${loadAttempts} failed, retrying...`);
       // Wait a bit before retrying
       await new Promise(resolve => setTimeout(resolve, 1000 * loadAttempts));
