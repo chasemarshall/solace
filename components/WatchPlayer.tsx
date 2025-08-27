@@ -11,10 +11,13 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
   const [isClient, setIsClient] = useState(false);
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isAutoFallback, setIsAutoFallback] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const embedRef = useRef<any>(null);
+  const maxRetries = 2;
 
   // Handle client-side hydration
   useEffect(() => {
@@ -63,7 +66,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     cleanup();
   }, [cleanup]);
 
-  // Initialize JS player
+  // Initialize JS player with retry logic
   const initializeJSPlayer = useCallback(async () => {
     if (!containerRef.current) return;
     
@@ -78,12 +81,23 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
         throw new Error("Twitch SDK failed to load");
       }
 
-      // Prepare parent domains
-      const parents = parent.split(",").map(p => p.trim()).filter(Boolean);
+      // Prepare parent domains - ensure all possible domains are included
+      const parentDomains = parent.split(",").map(p => p.trim()).filter(Boolean);
       const currentHost = window.location.hostname;
-      if (!parents.includes(currentHost)) {
-        parents.push(currentHost);
+      const currentOrigin = window.location.origin;
+      
+      // Add current domain variations
+      if (!parentDomains.includes(currentHost)) {
+        parentDomains.push(currentHost);
       }
+      if (!parentDomains.includes('localhost')) {
+        parentDomains.push('localhost');
+      }
+      if (!parentDomains.includes('127.0.0.1')) {
+        parentDomains.push('127.0.0.1');
+      }
+
+      console.log("Initializing Twitch player with parents:", parentDomains);
 
       // Clear container
       if (containerRef.current) {
@@ -93,7 +107,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
       // Initialize Twitch embed
       const embed = new Twitch.Embed(containerRef.current, {
         channel: channel.toLowerCase(),
-        parent: parents,
+        parent: parentDomains,
         width: "100%",
         height: "100%",
         autoplay: true,
@@ -103,6 +117,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
       });
 
       embedRef.current = embed;
+      setRetryCount(0); // Reset retry count on successful initialization
 
       // Set up event listeners
       const handleVideoReady = () => {
@@ -111,7 +126,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           if (player) {
             playerRef.current = player;
             setPlayerState('ready');
-            console.log("JS Player initialized successfully");
+            console.log("Enhanced player initialized successfully");
           }
         } catch (e) {
           console.error("Error setting up player:", e);
@@ -122,8 +137,14 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
 
       const handleEmbedError = (error: any) => {
         console.error("Embed error:", error);
-        setError("Player failed to load. Try switching to Basic mode.");
+        setError("Enhanced player encountered an error. Switching to Basic mode.");
         setPlayerState('error');
+        
+        // Auto-fallback to iframe mode on embed errors
+        setTimeout(() => {
+          setIsAutoFallback(true);
+          togglePlayerMode('iframe');
+        }, 1500);
       };
 
       // Attach embed event listeners
@@ -134,31 +155,49 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
         embed.addEventListener(Twitch.Embed.EMBED_ERROR, handleEmbedError);
       }
 
-      // Fallback timeout
+      // Fallback timeout - if player doesn't load within 8 seconds, assume it's working
       setTimeout(() => {
         if (playerState === 'loading') {
-          setPlayerState('ready'); // Assume it's working if no error
+          console.log("Player loading timeout reached, assuming success");
+          setPlayerState('ready');
         }
-      }, 5000);
+      }, 8000);
 
     } catch (e) {
-      console.error("Player initialization failed:", e);
+      console.error(`Player initialization failed (attempt ${retryCount + 1}):`, e);
       
       // Handle CORS errors specifically
       if (e instanceof Error && e.message.includes('CORS')) {
-        setError("Enhanced mode blocked by browser security. Basic mode recommended for this domain.");
+        setError("Enhanced mode blocked by browser security policy. Switching to Basic mode.");
         setPlayerState('error');
+        
         // Auto-fallback to iframe mode on CORS errors
         console.log("CORS error detected, auto-falling back to iframe mode");
         setTimeout(() => {
+          setIsAutoFallback(true);
           togglePlayerMode('iframe');
         }, 2000);
+      } else if (retryCount < maxRetries) {
+        // Retry logic for non-CORS errors
+        const nextRetryCount = retryCount + 1;
+        setRetryCount(nextRetryCount);
+        setError(`Enhanced player failed to load (attempt ${nextRetryCount}/${maxRetries + 1}). Retrying...`);
+        
+        setTimeout(() => {
+          initializeJSPlayer();
+        }, 1000 * nextRetryCount); // Exponential backoff
       } else {
-        setError("Enhanced player failed to load. Try Basic mode.");
+        // Max retries reached, fallback to iframe
+        setError("Enhanced player failed after multiple attempts. Switching to Basic mode.");
         setPlayerState('error');
+        
+        setTimeout(() => {
+          setIsAutoFallback(true);
+          togglePlayerMode('iframe');
+        }, 2000);
       }
     }
-  }, [channel, parent, cleanup, playerState, togglePlayerMode]);
+  }, [channel, parent, cleanup, playerState, togglePlayerMode, retryCount, maxRetries]);
 
   // Initialize player based on mode
   useEffect(() => {
@@ -184,8 +223,30 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
   }, [playerMode, initializeJSPlayer]);
 
   // Get iframe source with proper parent domain
-  const iframeParent = parent.split(",")[0] || "localhost";
-  const iframeSrc = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(iframeParent)}&muted=false&autoplay=true&theme=dark`;
+  const getIframeSrc = useCallback(() => {
+    if (!isClient) return '';
+    
+    const parentDomains = parent.split(",").map(p => p.trim()).filter(Boolean);
+    const currentHost = window.location.hostname;
+    
+    // Use current hostname if available, otherwise fallback to first parent or localhost
+    let iframeParent = currentHost;
+    if (!iframeParent || iframeParent === '') {
+      iframeParent = parentDomains[0] || 'localhost';
+    }
+    
+    // Ensure we have a valid parent domain
+    if (!parentDomains.includes(iframeParent)) {
+      parentDomains.push(iframeParent);
+    }
+    
+    // Build the iframe URL with all parent domains
+    const parentParams = parentDomains.map(p => `parent=${encodeURIComponent(p)}`).join('&');
+    
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&${parentParams}&muted=false&autoplay=true&theme=dark`;
+  }, [channel, parent, isClient]);
+
+  const iframeSrc = getIframeSrc();
 
   return (
     <div className="relative w-full">
@@ -217,6 +278,24 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
         </div>
       )}
 
+      {/* Auto-fallback Notification */}
+      {isAutoFallback && playerMode === 'iframe' && (
+        <div className="mb-3 bg-blue-500/20 border border-blue-500/30 rounded-lg p-3 text-sm text-blue-300 flex items-center justify-between">
+          <div className="flex-1">
+            <span>Automatically switched to Basic mode for better compatibility.</span>
+            <div className="mt-1 text-xs text-blue-400">
+              Enhanced mode had issues loading. You can try Enhanced mode again anytime.
+            </div>
+          </div>
+          <button
+            onClick={() => setIsAutoFallback(false)}
+            className="ml-3 text-blue-400 hover:text-blue-300"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Error Display */}
       {error && (
         <div className="mb-3 bg-red-500/20 border border-red-500/30 rounded-lg p-3 text-sm text-red-300 flex items-center justify-between">
@@ -225,6 +304,11 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
             {error.includes('CORS') && (
               <div className="mt-1 text-xs text-red-400">
                 This is a browser security feature. Basic mode works without restrictions.
+              </div>
+            )}
+            {error.includes('attempt') && (
+              <div className="mt-1 text-xs text-red-400">
+                The player will automatically retry or switch to Basic mode.
               </div>
             )}
           </div>
