@@ -64,9 +64,19 @@ export async function loadTwitchSDK(): Promise<any> {
       isResolved = true;
       cleanup();
       
-      const error = new Error(`Failed to load Twitch SDK: ${event.type}`);
-      console.error(error);
-      reject(error);
+      // Check for CORS errors specifically
+      const isCorsError = event.type === 'error' && 
+        (event.target as HTMLScriptElement)?.src?.includes('twitch.tv');
+      
+      if (isCorsError) {
+        const error = new Error("CORS: Twitch SDK blocked by browser security policy. Use Basic mode instead.");
+        console.error(error);
+        reject(error);
+      } else {
+        const error = new Error(`Failed to load Twitch SDK: ${event.type}`);
+        console.error(error);
+        reject(error);
+      }
     };
     
     script.addEventListener('load', handleLoad);
@@ -96,13 +106,13 @@ export async function loadTwitchSDK(): Promise<any> {
     twitchSDKPromise = null;
     loadAttempts++;
     
-    if (loadAttempts < MAX_ATTEMPTS) {
+    if (loadAttempts < MAX_ATTEMPTS && !error.message.includes('CORS')) {
       console.log(`Twitch SDK load attempt ${loadAttempts} failed, retrying...`);
       // Wait a bit before retrying
       await new Promise(resolve => setTimeout(resolve, 1000 * loadAttempts));
       return loadTwitchSDK();
     } else {
-      console.error(`Twitch SDK failed to load after ${MAX_ATTEMPTS} attempts`);
+      console.error(`Twitch SDK failed to load after ${loadAttempts} attempts`);
       throw error;
     }
   }

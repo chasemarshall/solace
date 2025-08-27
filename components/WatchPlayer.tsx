@@ -4,10 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { loadTwitchSDK } from "@/lib/twitch/embed";
 
 type PlayerState = 'loading' | 'ready' | 'error';
-type PlayerMode = 'js' | 'iframe';
+type PlayerMode = 'iframe' | 'js';
 
 export default function WatchPlayer({ channel, parent }: { channel: string; parent: string }) {
-  const [playerMode, setPlayerMode] = useState<PlayerMode>("iframe");
+  const [playerMode, setPlayerMode] = useState<PlayerMode>("iframe"); // Default to iframe
   const [isClient, setIsClient] = useState(false);
   const [playerState, setPlayerState] = useState<PlayerState>('loading');
   const [error, setError] = useState<string | null>(null);
@@ -136,8 +136,20 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
 
     } catch (e) {
       console.error("Player initialization failed:", e);
-      setError("Enhanced player failed to load. Try Basic mode.");
-      setPlayerState('error');
+      
+      // Handle CORS errors specifically
+      if (e instanceof Error && e.message.includes('CORS')) {
+        setError("Enhanced mode blocked by browser security. Basic mode recommended for this domain.");
+        setPlayerState('error');
+        // Auto-fallback to iframe mode on CORS errors
+        console.log("CORS error detected, auto-falling back to iframe mode");
+        setTimeout(() => {
+          togglePlayerMode('iframe');
+        }, 2000);
+      } else {
+        setError("Enhanced player failed to load. Try Basic mode.");
+        setPlayerState('error');
+      }
     }
   }, [channel, parent, cleanup, playerState]);
 
@@ -171,7 +183,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     cleanup();
   }, [cleanup]);
 
-  // Get iframe source
+  // Get iframe source with proper parent domain
   const iframeParent = parent.split(",")[0] || "localhost";
   const iframeSrc = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(iframeParent)}&muted=false&autoplay=true`;
 
@@ -208,7 +220,14 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
       {/* Error Display */}
       {error && (
         <div className="mb-3 bg-red-500/20 border border-red-500/30 rounded-lg p-3 text-sm text-red-300 flex items-center justify-between">
-          <span>{error}</span>
+          <div className="flex-1">
+            <span>{error}</span>
+            {error.includes('CORS') && (
+              <div className="mt-1 text-xs text-red-400">
+                This is a browser security feature. Basic mode works without restrictions.
+              </div>
+            )}
+          </div>
           <button
             onClick={() => setError(null)}
             className="ml-3 text-red-400 hover:text-red-300"
@@ -249,7 +268,10 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
                 <div className="flex flex-col items-center gap-3 text-center p-6">
                   <div className="text-red-400 text-4xl">⚠</div>
                   <div className="text-sm text-text-muted max-w-md">
-                    Enhanced player failed to load. Try switching to Basic mode or refreshing the page.
+                    {error?.includes('CORS') 
+                      ? "Enhanced mode is blocked by browser security. Basic mode is recommended."
+                      : "Enhanced player failed to load. Try switching to Basic mode or refreshing the page."
+                    }
                   </div>
                   <div className="flex gap-3">
                     <button
@@ -280,6 +302,11 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           {playerMode === 'js' && playerState === 'ready' && (
             <span className="ml-auto text-xs">
               Enhanced Mode
+            </span>
+          )}
+          {playerMode === 'iframe' && (
+            <span className="ml-auto text-xs">
+              Basic Mode
             </span>
           )}
         </div>
