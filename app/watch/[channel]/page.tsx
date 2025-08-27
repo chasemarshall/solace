@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import WatchPlayer from "@/components/WatchPlayer";
 import TwitchChat from "@/components/TwitchChat";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,9 @@ export default async function Watch({ params }: { params: { channel: string } })
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="lg:col-span-2">
-        <WatchPlayer channel={channel} parent={parent} />
+        <ErrorBoundary>
+          <WatchPlayer channel={channel} parent={parent} />
+        </ErrorBoundary>
         <div className="mt-4 rounded-xl bg-surface p-4">
           <h2 className="font-semibold">About this stream</h2>
           <p className="mt-2 text-sm text-text-muted">Basic watch page. Tabs for Info / VODs / Clips can be added later.</p>
@@ -23,7 +26,9 @@ export default async function Watch({ params }: { params: { channel: string } })
       </div>
       <aside className="rounded-xl border border-white/5 bg-surface">
         <div className="h-[70vh]">
-          <TwitchChat channel={channel} />
+          <ErrorBoundary>
+            <TwitchChat channel={channel} />
+          </ErrorBoundary>
         </div>
       </aside>
     </div>
