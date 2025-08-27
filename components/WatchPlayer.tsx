@@ -185,7 +185,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
 
   // Get iframe source with proper parent domain
   const iframeParent = parent.split(",")[0] || "localhost";
-  const iframeSrc = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(iframeParent)}&muted=false&autoplay=true`;
+  const iframeSrc = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(iframeParent)}&muted=false&autoplay=true&theme=dark`;
 
   return (
     <div className="relative w-full">
@@ -249,6 +249,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
             allowFullScreen
             scrolling="no"
             frameBorder="0"
+            allow="autoplay; fullscreen"
           />
         ) : (
           <>

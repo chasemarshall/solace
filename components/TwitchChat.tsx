@@ -74,42 +74,125 @@ export default function TwitchChat({ channel }: { channel: string }) {
     return color;
   };
 
-  // Enhanced badge mapping with more emojis
-  const getBadgeEmoji = (setID: string, version: string): string | null => {
-    const badgeMap: { [key: string]: { [version: string]: string } | string } = {
-      broadcaster: "👑",
-      moderator: "🗡️",
-      subscriber: "⭐",
-      vip: "💎",
-      premium: "💜",
-      turbo: "⚡",
-      staff: "🛡️",
-      admin: "👨‍💼",
-      global_mod: "🌐",
-      founder: "🏆",
-      artist: "🎨",
-      partner: "✅",
-      verified: "✔️",
-      bits: "💰",
-      "bits-leader": "🥇",
-      "sub-gifter": "🎁",
-      "moments": "📸",
-      "clip-champ": "🏅"
+  // Enhanced badge mapping with more emojis and descriptions
+  const getBadgeInfo = (setID: string, version: string): { emoji: string; title: string; description: string } => {
+    const badgeMap: { [key: string]: { emoji: string; title: string; description: string } } = {
+      broadcaster: {
+        emoji: "👑",
+        title: "Broadcaster",
+        description: "The channel owner"
+      },
+      moderator: {
+        emoji: "🗡️",
+        title: "Moderator",
+        description: "Channel moderator"
+      },
+      subscriber: {
+        emoji: "⭐",
+        title: "Subscriber",
+        description: `Subscriber for ${version} months`
+      },
+      vip: {
+        emoji: "💎",
+        title: "VIP",
+        description: "Very Important Person"
+      },
+      premium: {
+        emoji: "💜",
+        title: "Premium",
+        description: "Twitch Premium subscriber"
+      },
+      turbo: {
+        emoji: "⚡",
+        title: "Turbo",
+        description: "Twitch Turbo subscriber"
+      },
+      staff: {
+        emoji: "🛡️",
+        title: "Staff",
+        description: "Twitch staff member"
+      },
+      admin: {
+        emoji: "👨‍💼",
+        title: "Admin",
+        description: "Twitch administrator"
+      },
+      global_mod: {
+        emoji: "🌐",
+        title: "Global Moderator",
+        description: "Global Twitch moderator"
+      },
+      founder: {
+        emoji: "🏆",
+        title: "Founder",
+        description: "Channel founder"
+      },
+      artist: {
+        emoji: "🎨",
+        title: "Artist",
+        description: "Verified artist"
+      },
+      partner: {
+        emoji: "✅",
+        title: "Partner",
+        description: "Twitch partner"
+      },
+      verified: {
+        emoji: "✔️",
+        title: "Verified",
+        description: "Verified account"
+      },
+      bits: {
+        emoji: "💰",
+        title: "Bits",
+        description: "Bits leader"
+      },
+      "bits-leader": {
+        emoji: "🥇",
+        title: "Bits Leader",
+        description: "Top bits contributor"
+      },
+      "sub-gifter": {
+        emoji: "🎁",
+        title: "Sub Gifter",
+        description: "Gifted subscriptions"
+      },
+      "moments": {
+        emoji: "📸",
+        title: "Moments",
+        description: "Featured in moments"
+      },
+      "clip-champ": {
+        emoji: "🏅",
+        title: "Clip Champion",
+        description: "Top clip creator"
+      }
     };
 
     const badge = badgeMap[setID];
-    if (typeof badge === 'string') return badge;
-    if (typeof badge === 'object' && badge[version]) return badge[version];
+    if (badge) {
+      return badge;
+    }
     
     // Default subscriber tiers
     if (setID === 'subscriber') {
       const months = parseInt(version) || 0;
-      if (months >= 24) return "⭐⭐⭐";
-      if (months >= 12) return "⭐⭐";
-      return "⭐";
+      let emoji = "⭐";
+      if (months >= 24) emoji = "⭐⭐⭐";
+      else if (months >= 12) emoji = "⭐⭐";
+      
+      return {
+        emoji,
+        title: "Subscriber",
+        description: `Subscriber for ${months} months`
+      };
     }
     
-    return null;
+    return {
+      emoji: "🏷️",
+      title: setID,
+      description: "Custom badge"
+    };
   };
 
   // Fetch BTTV emotes
@@ -259,15 +342,13 @@ export default function TwitchChat({ channel }: { channel: string }) {
       const badges: Badge[] = [];
       if (tags.badges) {
         Object.entries(tags.badges).forEach(([setID, version]: [string, any]) => {
-          const emoji = getBadgeEmoji(setID, version.toString());
-          if (emoji) {
-            badges.push({
-              setID,
-              version: version.toString(),
-              emoji,
-              title: setID
-            });
-          }
+          const { emoji, title, description } = getBadgeInfo(setID, version.toString());
+          badges.push({
+            setID,
+            version: version.toString(),
+            emoji,
+            title
+          });
         });
       }
 
@@ -503,15 +584,18 @@ export default function TwitchChat({ channel }: { channel: string }) {
                     <div className="text-sm">
                       <span className="inline-flex items-center gap-1.5 flex-wrap">
                         {/* Badges */}
-                        {m.badges.map((badge, idx) => (
-                          <span
-                            key={`${badge.setID}-${badge.version}-${idx}`}
-                            className="text-sm leading-none"
-                            title={`${badge.setID}`}
-                          >
-                            {badge.emoji}
-                          </span>
-                        ))}
+                        {m.badges.map((badge, idx) => {
+                          const { emoji, title, description } = getBadgeInfo(badge.setID, badge.version);
+                          return (
+                            <span
+                              key={`${badge.setID}-${badge.version}-${idx}`}
+                              className="text-sm leading-none"
+                              title={`${title}: ${description}`}
+                            >
+                              {emoji}
+                            </span>
+                          );
+                        })}
 
                         {/* Username */}
                         <span 
