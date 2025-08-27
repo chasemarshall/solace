@@ -4,22 +4,6 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['tmi.js']
   },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'static-cdn.jtvnw.net',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: '*.twitch.tv',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
   async headers() {
     return [
       {

@@ -35,7 +35,7 @@ export default function LiveCard({ s }: { s: Stream }) {
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             onError={handleImageError}
-            unoptimized={true} // Bypass Next.js image optimization for external images
+            unoptimized={thumb.includes('via.placeholder.com')}
           />
         ) : (
           <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-900/20 to-blue-900/20">
