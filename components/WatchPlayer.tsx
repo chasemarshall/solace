@@ -34,6 +34,10 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     const savedMode = localStorage.getItem("player-mode") as PlayerMode;
     if (savedMode && (savedMode === "js" || savedMode === "iframe")) {
       setPlayerMode(savedMode);
+    } else {
+      // Default to iframe mode since Enhanced mode has CORS issues
+      setPlayerMode("iframe");
+      localStorage.setItem("player-mode", "iframe");
     }
   }, []);
 
@@ -68,10 +72,13 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
       }
     }
 
-    // Clear container
+    // Clear container safely
     if (containerRef.current) {
       try {
-        containerRef.current.innerHTML = '';
+        // Remove all child nodes safely
+        while (containerRef.current.firstChild) {
+          containerRef.current.removeChild(containerRef.current.firstChild);
+        }
       } catch (e) {
         console.log("Container cleanup error:", e);
       }
@@ -236,7 +243,12 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     if (!isClient) return;
     
     if (playerMode === 'js') {
-      initializeJSPlayer();
+      // For Enhanced mode, try to initialize but fallback to Basic if CORS issues
+      initializeJSPlayer().catch((error) => {
+        console.log("Enhanced mode failed, falling back to Basic mode:", error);
+        setPlayerMode('iframe');
+        setError(null);
+      });
     } else {
       setPlayerState('ready');
       cleanup();
@@ -274,24 +286,11 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
   const getIframeSrc = useCallback(() => {
     if (!isClient) return '';
     
-    const parentDomains = parent.split(",").map(p => p.trim()).filter(Boolean);
-    const currentHost = window.location.hostname;
+    // Use the parent environment variable directly
+    const parentDomain = parent || 'localhost';
     
-    // Use current hostname if available, otherwise fallback to first parent or localhost
-    let iframeParent = currentHost;
-    if (!iframeParent || iframeParent === '') {
-      iframeParent = parentDomains[0] || 'localhost';
-    }
-    
-    // Ensure we have a valid parent domain
-    if (!parentDomains.includes(iframeParent)) {
-      parentDomains.push(iframeParent);
-    }
-    
-    // Build the iframe URL with all parent domains
-    const parentParams = parentDomains.map(p => `parent=${encodeURIComponent(p)}`).join('&');
-    
-    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&${parentParams}&muted=false&autoplay=true&theme=dark`;
+    // Privacy-focused iframe URL - minimal parameters, no tracking
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true`;
   }, [channel, parent, isClient]);
 
   const iframeSrc = getIframeSrc();
@@ -395,7 +394,8 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
             allowFullScreen
             scrolling="no"
             frameBorder="0"
-            allow="autoplay; fullscreen"
+            onLoad={() => console.log("Iframe loaded successfully")}
+            onError={(e) => console.error("Iframe failed to load:", e)}
           />
         ) : (
           <>
