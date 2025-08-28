@@ -554,7 +554,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       <div className="bg-surface border-b border-white/10 p-3 rounded-t-xl">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-          <span className="text-sm font-bold text-white tracking-wide">live chat</span>
+          <span className="text-sm font-bold text-white tracking-wide">live chat - {channel}</span>
         </div>
       </div>
 
