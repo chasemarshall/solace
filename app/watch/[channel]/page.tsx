@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import WatchPlayer from "@/components/WatchPlayer";
 import TwitchChat from "@/components/TwitchChat";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import StreamInfo from "@/components/StreamInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +18,6 @@ export default async function Watch({ params }: { params: { channel: string } })
       <div className="xl:col-span-3 lg:col-span-2">
         <ErrorBoundary>
           <WatchPlayer channel={channel} parent={parent} />
-        </ErrorBoundary>
-        <ErrorBoundary>
-          <StreamInfo channel={channel} />
         </ErrorBoundary>
       </div>
       <aside className="xl:col-span-1 lg:col-span-1 rounded-xl border border-white/5 bg-surface">

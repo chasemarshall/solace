@@ -327,6 +327,8 @@ export default function DevWatch({ params }: { params: { channel: string } }) {
             parent={process.env.NEXT_PUBLIC_TWITCH_PARENT || 'localhost'}
           />
           <DevAnalytics />
+          {/* StreamInfo component for dev environment - shows detailed stream data */}
+          <StreamInfo channel={params.channel} />
         </div>
         
         <aside className="xl:col-span-1">
@@ -337,6 +339,8 @@ export default function DevWatch({ params }: { params: { channel: string } }) {
   );
 }
 ```
+
+**Note**: The `StreamInfo` component (located in `/components/StreamInfo.tsx`) should be used in the dev player to show detailed stream information including live status, viewer count, game name, and stream title. This component is designed for backend API integration and provides placeholder content until connected.
 
 ### Step 11: Environment Configuration
 Add to `.env.local`:
