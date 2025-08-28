@@ -22,7 +22,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           src={iframeSrc}
           className="w-full h-full"
           allow="autoplay; fullscreen; picture-in-picture"
-          sandbox="allow-scripts allow-forms allow-pointer-lock allow-popups"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-pointer-lock allow-popups"
           referrerPolicy="strict-origin-when-cross-origin"
           scrolling="no"
           frameBorder="0"
