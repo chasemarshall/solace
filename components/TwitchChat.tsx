@@ -263,7 +263,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       setBttvEmotes(allBttvEmotes);
       console.log(`✅ Loaded ${Object.keys(allBttvEmotes).length} BTTV emotes for ${channelName}`);
       if (Object.keys(allBttvEmotes).length > 0) {
-        console.log("🎭 BTTV emotes:", Object.keys(allBttvEmotes).slice(0, 5).join(', '), '...');
+        console.log("🎭 BTTV emotes:", Object.keys(allBttvEmotes).slice(0, 10).join(', '));
+        // Test a few common emotes for debugging
+        const commonEmotes = ['Kappa', 'PogChamp', 'EZ', 'KEKW', 'PepeHands'];
+        const foundCommon = commonEmotes.filter(emote => allBttvEmotes[emote]);
+        if (foundCommon.length > 0) {
+          console.log("🎯 Found common BTTV emotes:", foundCommon.join(', '));
+        }
       }
     } catch (e) {
       console.error("❌ Failed to fetch BTTV emotes:", e);
@@ -347,7 +353,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       setFfzEmotes(allFfzEmotes);
       console.log(`✅ Loaded ${Object.keys(allFfzEmotes).length} FFZ emotes for ${channelName}`);
       if (Object.keys(allFfzEmotes).length > 0) {
-        console.log("🐸 FFZ emotes:", Object.keys(allFfzEmotes).slice(0, 5).join(', '), '...');
+        console.log("🐸 FFZ emotes:", Object.keys(allFfzEmotes).slice(0, 10).join(', '));
+        // Test a few common emotes for debugging
+        const commonEmotes = ['Kappa', 'PogChamp', 'EZ', 'KEKW', 'PepeHands', '5Head', 'pepePls'];
+        const foundCommon = commonEmotes.filter(emote => allFfzEmotes[emote]);
+        if (foundCommon.length > 0) {
+          console.log("🎯 Found common FFZ emotes:", foundCommon.join(', '));
+        }
       }
     } catch (e) {
       console.error("❌ Failed to fetch FFZ emotes:", e);
@@ -538,58 +550,86 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       text = before + ` __TWITCH_${id}__ ` + after;
     });
 
-    // Split by spaces but preserve the structure
-    const words = text.split(' ');
+    // Build EmoteMap for faster lookups (case-sensitive first, then case-insensitive fallback)
+    const emoteMap = new Map<string, { url: string; provider: string }>();
+    
+    // Add BTTV emotes
+    Object.entries(bttvEmotes).forEach(([code, emote]) => {
+      emoteMap.set(code, { url: emote.urls["1"], provider: 'BTTV' });
+    });
+    
+    // Add FFZ emotes  
+    Object.entries(ffzEmotes).forEach(([code, emote]) => {
+      emoteMap.set(code, { url: emote.urls["1"], provider: 'FFZ' });
+    });
+
+    // Improved tokenization with word boundaries
+    // This regex splits on whitespace but preserves spaces, and also separates punctuation
+    const tokens = text.match(/\S+|\s+/g) || [];
     const parts: Array<{ type: 'text' | 'emote'; content: string; emoteUrl?: string }> = [];
     
-    words.forEach((word, index) => {
-      if (word.trim() === '') {
-        // Skip empty strings but preserve single spaces
-        if (index < words.length - 1) {
-          parts.push({ type: 'text', content: ' ' });
-        }
+    tokens.forEach((token) => {
+      // Handle whitespace tokens
+      if (/^\s+$/.test(token)) {
+        parts.push({ type: 'text', content: token });
         return;
       }
 
-      if (word.startsWith('__TWITCH_') && word.endsWith('__')) {
-        const emoteId = word.match(/__TWITCH_(\d+)__/)?.[1];
+      // Handle Twitch emote placeholders
+      if (token.startsWith('__TWITCH_') && token.endsWith('__')) {
+        const emoteId = token.match(/__TWITCH_(\d+)__/)?.[1];
         if (emoteId) {
-          // Try the modern format first, with fallback
           const emoteUrl = `https://static-cdn.jtvnw.net/emoticons/v2/${emoteId}/default/dark/1.0`;
           parts.push({
             type: 'emote',
-            content: word.replace(/__TWITCH_\d+__/, `twitch_emote_${emoteId}`),
+            content: `twitch_emote_${emoteId}`,
             emoteUrl
           });
           console.log(`🎮 Twitch emote found: ID ${emoteId}, URL: ${emoteUrl}`);
         }
-      } else if (bttvEmotes[word]) {
-        const emoteUrl = bttvEmotes[word].urls["1"];
-        parts.push({
-          type: 'emote',
-          content: word,
-          emoteUrl
-        });
-        console.log(`🎭 BTTV emote found: ${word}, URL: ${emoteUrl}`);
-      } else if (ffzEmotes[word]) {
-        const emoteUrl = ffzEmotes[word].urls["1"];
-        parts.push({
-          type: 'emote',
-          content: word,
-          emoteUrl
-        });
-        console.log(`🐸 FFZ emote found: ${word}, URL: ${emoteUrl}`);
-      } else {
-        parts.push({
-          type: 'text',
-          content: word
-        });
+        return;
       }
+
+      // Check for emotes with word boundary handling
+      // Try exact match first
+      if (emoteMap.has(token)) {
+        const emoteInfo = emoteMap.get(token)!;
+        parts.push({
+          type: 'emote',
+          content: token,
+          emoteUrl: emoteInfo.url
+        });
+        console.log(`${emoteInfo.provider === 'BTTV' ? '🎭' : '🐸'} ${emoteInfo.provider} emote found: ${token}, URL: ${emoteInfo.url}`);
+        return;
+      }
+
+      // Handle tokens with punctuation (e.g., "Kappa!", "PogChamp?", "Kappa.")
+      // Extract potential emote code by removing trailing punctuation
+      const emotePart = token.match(/^([A-Za-z0-9_]+)/)?.[1];
+      const punctuationPart = token.slice(emotePart?.length || 0);
       
-      // Add space after each word except the last
-      if (index < words.length - 1) {
-        parts.push({ type: 'text', content: ' ' });
+      if (emotePart && emoteMap.has(emotePart) && punctuationPart.match(/^[^\w\s]*$/)) {
+        // Found an emote with trailing punctuation
+        const emoteInfo = emoteMap.get(emotePart)!;
+        parts.push({
+          type: 'emote',
+          content: emotePart,
+          emoteUrl: emoteInfo.url
+        });
+        console.log(`${emoteInfo.provider === 'BTTV' ? '🎭' : '🐸'} ${emoteInfo.provider} emote found with punctuation: ${emotePart}, URL: ${emoteInfo.url}`);
+        
+        // Add the punctuation as separate text
+        if (punctuationPart) {
+          parts.push({ type: 'text', content: punctuationPart });
+        }
+        return;
       }
+
+      // No emote found, treat as regular text
+      parts.push({
+        type: 'text',
+        content: token
+      });
     });
 
     return parts;
@@ -714,7 +754,15 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                                 className="inline-block h-6 w-6 align-middle mx-0.5"
                                 onError={(e) => {
                                   console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
-                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  // Instead of hiding, replace with text in brackets to show emote code
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  // Create text replacement 
+                                  const textNode = document.createElement('span');
+                                  textNode.textContent = `[${part.content}]`;
+                                  textNode.className = 'text-purple-400 text-sm font-mono bg-purple-900/20 px-1 rounded';
+                                  textNode.title = `Emote failed to load: ${part.content}`;
+                                  target.parentNode?.insertBefore(textNode, target.nextSibling);
                                 }}
                                 onLoad={() => {
                                   console.log(`✅ Loaded emote: ${part.content}`);
@@ -751,7 +799,15 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                               className="inline-block h-6 w-6 align-middle mx-0.5"
                               onError={(e) => {
                                 console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
-                                (e.target as HTMLImageElement).style.display = 'none';
+                                // Instead of hiding, replace with text in brackets to show emote code
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                // Create text replacement 
+                                const textNode = document.createElement('span');
+                                textNode.textContent = `[${part.content}]`;
+                                textNode.className = 'text-purple-400 text-sm font-mono bg-purple-900/20 px-1 rounded';
+                                textNode.title = `Emote failed to load: ${part.content}`;
+                                target.parentNode?.insertBefore(textNode, target.nextSibling);
                               }}
                               onLoad={() => {
                                 console.log(`✅ Loaded emote: ${part.content}`);
