@@ -80,10 +80,12 @@ export async function loadTwitchSDK(): Promise<any> {
     script.addEventListener('load', handleLoad);
     script.addEventListener('error', handleError);
     
-    // Remove existing script if present
+    // Enforce singleton - if script already exists, reuse the existing promise
     const existingScript = document.getElementById('twitch-embed-script');
     if (existingScript) {
-      existingScript.remove();
+      // Script already loading/loaded, wait for current promise
+      cleanup();
+      return twitchSDKPromise;
     }
     
     // Add to head

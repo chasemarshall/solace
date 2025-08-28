@@ -31,13 +31,19 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
   // Handle client-side hydration
   useEffect(() => {
     setIsClient(true);
+    
+    // Check environment variable for default mode
+    const envPlayerMode = process.env.NEXT_PUBLIC_PLAYER_MODE as PlayerMode;
+    const defaultMode = (envPlayerMode === 'enhanced' || envPlayerMode === 'iframe') 
+      ? envPlayerMode 
+      : 'iframe';
+    
     const savedMode = localStorage.getItem("player-mode") as PlayerMode;
     if (savedMode && (savedMode === "js" || savedMode === "iframe")) {
       setPlayerMode(savedMode);
     } else {
-      // Default to iframe mode since Enhanced mode has CORS issues
-      setPlayerMode("iframe");
-      localStorage.setItem("player-mode", "iframe");
+      setPlayerMode(defaultMode === 'enhanced' ? 'js' : 'iframe');
+      localStorage.setItem("player-mode", defaultMode === 'enhanced' ? 'js' : 'iframe');
     }
   }, []);
 
@@ -75,9 +81,14 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     // Clear container safely
     if (containerRef.current) {
       try {
-        // Remove all child nodes safely
-        while (containerRef.current.firstChild) {
-          containerRef.current.removeChild(containerRef.current.firstChild);
+        // Check if container is still connected before manipulating
+        if (containerRef.current.isConnected) {
+          // Remove all child nodes safely
+          while (containerRef.current.firstChild) {
+            if (containerRef.current.firstChild.parentNode === containerRef.current) {
+              containerRef.current.removeChild(containerRef.current.firstChild);
+            }
+          }
         }
       } catch (e) {
         console.log("Container cleanup error:", e);
@@ -208,10 +219,18 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
       }
 
       // Fallback timeout
+      let hasTimedOut = false;
       setTimeout(() => {
-        if (playerState === 'loading') {
-          console.log("Player loading timeout reached, assuming success");
-          setPlayerState('ready');
+        if (playerState === 'loading' && !embedRef.current) {
+          hasTimedOut = true;
+          console.log("Player loading timeout reached, falling back to iframe");
+          const timeoutError = handleError(new Error('Player loading timeout'), 'timeout');
+          setError(timeoutError);
+          setPlayerState('error');
+          setTimeout(() => {
+            setIsAutoFallback(true);
+            togglePlayerMode('iframe');
+          }, 1000);
         }
       }, 10000);
 
@@ -391,6 +410,9 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           <iframe 
             src={iframeSrc}
             className="w-full h-full"
+            allow="autoplay; fullscreen; picture-in-picture"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-pointer-lock allow-popups"
+            referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
             scrolling="no"
             frameBorder="0"
