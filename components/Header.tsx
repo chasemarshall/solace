@@ -16,10 +16,10 @@ export default function Header() {
   };
 
   return (
-    <header className="border-b border-white/5 bg-surface/60 backdrop-blur mb-6">
+    <header className="border-b border-white/5 bg-surface/60 backdrop-blur mb-8">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
         <Link href="/" className="font-semibold tracking-tight text-xl">
-          Modern Twitch
+          solace.
         </Link>
         <form onSubmit={handleSearch} className="hidden sm:block">
           <input

@@ -4,6 +4,9 @@ export default {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Geist', 'system-ui', 'sans-serif'],
+      },
       colors: {
         bg: "rgb(18,19,22)",
         surface: "rgb(28,29,33)",

@@ -291,9 +291,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
               });
             });
           }
+        } else if (channelRes.status === 404) {
+          console.log(`FFZ: No channel emotes found for ${channelName}`);
+        } else {
+          console.warn(`FFZ channel emotes failed with status ${channelRes.status} for ${channelName}`);
         }
       } catch (e) {
-        console.log("No FFZ channel emotes found for", channelName);
+        console.log("FFZ channel emotes request failed for", channelName, e);
       }
       
       setFfzEmotes(allFfzEmotes);
@@ -538,7 +542,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
           <span className="text-sm font-bold text-white tracking-wide">LIVE CHAT</span>
-          <div className="ml-auto text-xs text-text-muted">{messages.length} messages</div>
         </div>
       </div>
 
@@ -715,31 +718,22 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         )}
 
         {/* Input form */}
-        {canSend ? (
-          <form onSubmit={onSubmit} className="flex gap-3 p-3">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="flex-1 rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200"
-              placeholder={replyingTo ? `Reply to ${replyingTo.displayName}...` : "Send a message..."}
-              maxLength={500}
-            />
-            <button 
-              type="submit" 
-              disabled={!input.trim()}
-              className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:from-purple-500 hover:to-purple-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-purple-500/25"
-            >
-              Send
-            </button>
-          </form>
-        ) : (
-          <div className="p-3 text-center">
-            <div className="bg-bg border border-white/20 rounded-lg p-4">
-              <p className="text-text font-medium">Please log in to chat</p>
-              <p className="text-xs text-text-muted mt-1">We&apos;ll add the login feature soon!</p>
-            </div>
-          </div>
-        )}
+        <form className="flex gap-3 p-3">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className="flex-1 rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200"
+            placeholder="Type a message..."
+            maxLength={500}
+          />
+          <button 
+            type="button"
+            className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:from-purple-500 hover:to-purple-400 shadow-lg hover:shadow-purple-500/25 opacity-50 cursor-not-allowed"
+            title="Chat coming soon"
+          >
+            Send
+          </button>
+        </form>
 
         {/* Scroll to bottom button */}
         {showScrollButton && (

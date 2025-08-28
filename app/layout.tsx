@@ -3,7 +3,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "Modern Twitch - Clean Twitch Client",
+  title: "solace. - Clean Twitch Client",
   description: "A clean, modern Twitch web client for browsing live streams",
 };
 
@@ -22,9 +22,9 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-bg text-text min-h-screen">
         <Header />
-        <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <main className="container mx-auto px-4 max-w-7xl">
           {children}
-        </div>
+        </main>
       </body>
     </html>
   );
