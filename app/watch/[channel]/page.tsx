@@ -14,14 +14,14 @@ export default async function Watch({ params }: { params: { channel: string } })
   const { channel } = params;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-4 lg:grid-cols-3">
-      <div className="xl:col-span-3 lg:col-span-2">
+    <div className="grid gap-6 xl:grid-cols-5 lg:grid-cols-3">
+      <div className="xl:col-span-4 lg:col-span-2">
         <ErrorBoundary>
           <WatchPlayer channel={channel} parent={parent} />
         </ErrorBoundary>
       </div>
-      <aside className="xl:col-span-1 lg:col-span-1 rounded-xl border border-white/5 bg-surface">
-        <div className="h-[70vh]">
+      <aside className="xl:col-span-1 lg:col-span-1">
+        <div className="rounded-xl border border-white/5 bg-surface h-[75vh]">
           <ErrorBoundary>
             <TwitchChat channel={channel} playerMode="enhanced" />
           </ErrorBoundary>

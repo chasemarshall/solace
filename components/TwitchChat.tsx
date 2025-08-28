@@ -410,21 +410,34 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     const el = listRef.current;
     if (!el) return;
 
+    let scrollTimeout: NodeJS.Timeout;
+
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = el;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 30;
       
+      // Clear previous timeout
+      clearTimeout(scrollTimeout);
+      
+      // If user scrolled up from bottom, pause auto-scrolling immediately
       if (!isNearBottom && isAutoScrolling) {
         setIsAutoScrolling(false);
         setShowScrollButton(true);
-      } else if (isNearBottom && !isAutoScrolling) {
-        setIsAutoScrolling(true);
-        setShowScrollButton(false);
+      } 
+      // If user scrolled back near bottom, resume auto-scrolling after a brief delay
+      else if (isNearBottom && !isAutoScrolling) {
+        scrollTimeout = setTimeout(() => {
+          setIsAutoScrolling(true);
+          setShowScrollButton(false);
+        }, 500); // Brief delay to prevent flickering
       }
     };
 
-    el.addEventListener('scroll', handleScroll);
-    return () => el.removeEventListener('scroll', handleScroll);
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
   }, [isAutoScrolling]);
 
   const scrollToBottom = () => {
@@ -718,21 +731,21 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         )}
 
         {/* Input form */}
-        <form className="flex gap-3 p-3">
+        <form className="p-3">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="flex-1 rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200"
-            placeholder="Type a message..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                // Chat functionality coming soon
+                console.log('Message would be sent:', input);
+              }
+            }}
+            className="w-full rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200"
+            placeholder="Type a message (Enter to send)..."
             maxLength={500}
           />
-          <button 
-            type="button"
-            className="rounded-lg bg-gradient-to-r from-purple-600 to-purple-500 px-6 py-2.5 text-sm font-bold text-white transition-all duration-200 hover:from-purple-500 hover:to-purple-400 shadow-lg hover:shadow-purple-500/25 opacity-50 cursor-not-allowed"
-            title="Chat coming soon"
-          >
-            Send
-          </button>
         </form>
 
         {/* Scroll to bottom button */}
