@@ -47,6 +47,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [channelId, setChannelId] = useState<string>("");
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isLive, setIsLive] = useState<boolean | null>(null);
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -381,7 +382,9 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           const data = await res.json();
           const userId = data.user?.id;
           setChannelId(userId || "");
+          setIsLive(data.liveStream !== null);
           console.log(`✅ Channel ID for ${channel}: ${userId || 'not found'}`);
+          console.log(`📺 Live status for ${channel}: ${data.liveStream ? 'LIVE' : 'OFFLINE'}`);
           
           // Load emotes with proper IDs
           await Promise.all([
@@ -394,6 +397,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         }
       } catch (e) {
         console.error("❌ Failed to fetch channel data:", e);
+        setIsLive(false);
         // Fallback: load global emotes only
         console.log("🔄 Falling back to global emotes only");
         await Promise.all([
@@ -625,8 +629,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       {/* Header */}
       <div className="bg-surface border-b border-white/10 p-3 rounded-t-xl">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-          <span className="text-sm font-bold text-white tracking-wide">live chat - {channel}</span>
+          <div className={`h-2 w-2 rounded-full ${isLive === true ? 'bg-red-500 animate-pulse' : isLive === false ? 'bg-gray-500' : 'bg-gray-500 animate-pulse'}`}></div>
+          <span className="text-sm font-bold text-white tracking-wide">live chat</span>
         </div>
       </div>
 

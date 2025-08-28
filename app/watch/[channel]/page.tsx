@@ -3,6 +3,7 @@ import WatchPlayer from "@/components/WatchPlayer";
 import TwitchChat from "@/components/TwitchChat";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import FavoriteButton from "@/components/FavoriteButton";
+import StreamStatus from "@/components/StreamStatus";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,9 @@ export default async function Watch({ params }: { params: { channel: string } })
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-text">{channel}</h1>
-            <div className="flex items-center gap-2 text-sm text-text-muted mt-1">
-              <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-              <span>live</span>
-            </div>
+            <ErrorBoundary>
+              <StreamStatus channel={channel} />
+            </ErrorBoundary>
           </div>
           <ErrorBoundary>
             <FavoriteButton channel={channel} />
