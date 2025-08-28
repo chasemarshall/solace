@@ -14,8 +14,8 @@ export default async function Watch({ params }: { params: { channel: string } })
   const { channel } = params;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2">
+    <div className="grid gap-4 xl:grid-cols-4 lg:grid-cols-3">
+      <div className="xl:col-span-3 lg:col-span-2">
         <ErrorBoundary>
           <WatchPlayer channel={channel} parent={parent} />
         </ErrorBoundary>
@@ -24,7 +24,7 @@ export default async function Watch({ params }: { params: { channel: string } })
           <p className="mt-2 text-sm text-text-muted">Basic watch page. Tabs for Info / VODs / Clips can be added later.</p>
         </div>
       </div>
-      <aside className="rounded-xl border border-white/5 bg-surface">
+      <aside className="xl:col-span-1 lg:col-span-1 rounded-xl border border-white/5 bg-surface">
         <div className="h-[70vh]">
           <ErrorBoundary>
             <TwitchChat channel={channel} playerMode="enhanced" />

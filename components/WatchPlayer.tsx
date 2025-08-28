@@ -16,8 +16,8 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
 
   return (
     <div className="relative w-full">
-      {/* Player Container */}
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-white/10">
+      {/* Player Container - Larger like Twitch */}
+      <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
         <iframe 
           src={iframeSrc}
           className="w-full h-full"
@@ -32,12 +32,12 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
       </div>
 
       {/* Stream Info */}
-      <div className="mt-3 text-sm text-text-muted">
+      <div className="mt-4 text-sm text-text-muted">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-          <span>Live: {channel}</span>
-          <span className="ml-auto text-xs text-green-400">
-            Enhanced Player Active
+          <span className="font-medium">Live: {channel}</span>
+          <span className="ml-auto text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded-full">
+            Enhanced Player
           </span>
         </div>
       </div>
