@@ -87,7 +87,10 @@ export function useAdBlocker(enabled: boolean = false): AdBlockerHook {
 
     window.fetch = async (...args) => {
       const [resource, options] = args;
-      const url = typeof resource === 'string' ? resource : resource.url;
+      const url = typeof resource === 'string' ? resource : 
+                  resource instanceof Request ? resource.url :
+                  resource instanceof URL ? resource.toString() : 
+                  String(resource);
       const startTime = performance.now();
       
       // Check for ad patterns

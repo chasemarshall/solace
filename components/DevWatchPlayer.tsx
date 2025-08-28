@@ -171,7 +171,7 @@ function DevTwitchEmbed({
         }
       }
     };
-  }, [containerRef, channel, parent, adBlockEnabled, onSuccess, onError]);
+  }, [containerRef, channel, parent, adBlockEnabled, onSuccess, onError, embed]);
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
