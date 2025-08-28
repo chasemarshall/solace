@@ -200,9 +200,17 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     try {
       // Always fetch global emotes with timeout
       console.log("📡 Fetching BTTV global emotes...");
-      const globalRes = await fetch("https://api.betterttv.net/3/cached/emotes/global", {
-        timeout: 10000 // 10 second timeout
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      let globalRes: Response;
+      try {
+        globalRes = await fetch(
+          "https://api.betterttv.net/3/cached/emotes/global",
+          { signal: controller.signal }
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
       
       if (!globalRes.ok) {
         throw new Error(`BTTV global API returned ${globalRes.status}`);
@@ -268,9 +276,17 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     try {
       // Always fetch global emotes with timeout
       console.log("📡 Fetching FFZ global emotes...");
-      const globalRes = await fetch("https://api.frankerfacez.com/v1/set/global", {
-        timeout: 10000 // 10 second timeout
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      let globalRes: Response;
+      try {
+        globalRes = await fetch(
+          "https://api.frankerfacez.com/v1/set/global",
+          { signal: controller.signal }
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
       
       if (!globalRes.ok) {
         throw new Error(`FFZ global API returned ${globalRes.status}`);
@@ -349,9 +365,17 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     const fetchChannelData = async () => {
       try {
         console.log(`📡 Fetching channel data for: ${channel}`);
-        const res = await fetch(`/api/channel/${channel}`, {
-          timeout: 8000 // 8 second timeout for channel API
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        let res: Response;
+        try {
+          res = await fetch(
+            `/api/channel/${channel}`,
+            { signal: controller.signal }
+          );
+        } finally {
+          clearTimeout(timeoutId);
+        }
         
         if (res.ok) {
           const data = await res.json();
