@@ -36,15 +36,15 @@ export default class ErrorBoundary extends Component<Props, State> {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="text-4xl mb-4">⚠️</div>
-            <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
+            <h2 className="text-xl font-semibold mb-2">something went wrong</h2>
             <p className="text-text-muted mb-4">
-              An error occurred while loading this component.
+              an error occurred while loading this component.
             </p>
             <button
               onClick={() => this.setState({ hasError: false, error: undefined })}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
-              Try Again
+              try again
             </button>
           </div>
         </div>

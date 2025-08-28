@@ -3,7 +3,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
-  title: "solace. - Clean Twitch Client",
+  title: "solace. - home",
   description: "A clean, modern Twitch web client for browsing live streams",
 };
 

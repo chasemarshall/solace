@@ -24,7 +24,7 @@ export default function StreamInfo({ channel }: StreamInfoProps) {
 
   return (
     <div className="mt-6 rounded-xl bg-surface border border-white/5 p-6">
-      <h2 className="text-lg font-semibold text-white mb-4">About this stream</h2>
+      <h2 className="text-lg font-semibold text-white mb-4">about this stream</h2>
       
       <div className="space-y-4">
         {/* Channel info */}
@@ -36,24 +36,24 @@ export default function StreamInfo({ channel }: StreamInfoProps) {
           </div>
           <div>
             <h3 className="font-medium text-white">{channel}</h3>
-            <p className="text-sm text-text-muted">Twitch Streamer</p>
+            <p className="text-sm text-text-muted">twitch streamer</p>
           </div>
         </div>
 
         {/* Stream status */}
         <div className="flex items-center gap-2 text-sm">
           <div className="h-2 w-2 rounded-full bg-gray-500"></div>
-          <span className="text-text-muted">Currently offline</span>
+          <span className="text-text-muted">currently offline</span>
         </div>
 
         {/* Placeholder info */}
         <div className="text-sm text-text-muted space-y-2">
-          <p>Stream information will be loaded dynamically when the backend API is connected.</p>
+          <p>stream information will be loaded dynamically when the backend api is connected.</p>
           <div className="pt-2 text-xs space-y-1 opacity-75">
-            <p>• Live status and viewer count</p>
-            <p>• Current game/category</p>
-            <p>• Stream title and description</p>
-            <p>• Stream uptime when live</p>
+            <p>• live status and viewer count</p>
+            <p>• current game/category</p>
+            <p>• stream title and description</p>
+            <p>• stream uptime when live</p>
           </div>
         </div>
       </div>

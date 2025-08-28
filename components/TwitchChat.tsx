@@ -554,7 +554,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       <div className="bg-surface border-b border-white/10 p-3 rounded-t-xl">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-          <span className="text-sm font-bold text-white tracking-wide">LIVE CHAT</span>
+          <span className="text-sm font-bold text-white tracking-wide">live chat</span>
         </div>
       </div>
 
@@ -743,7 +743,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
               }
             }}
             className="w-full rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200"
-            placeholder="Type a message (Enter to send)..."
+            placeholder="type here."
             maxLength={500}
           />
         </form>

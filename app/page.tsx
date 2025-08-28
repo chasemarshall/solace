@@ -78,19 +78,18 @@ export default function Home() {
   return (
     <ErrorBoundary>
       <div>
-        <h1 className="text-2xl font-semibold">Now Live</h1>
-        <p className="mt-1 text-sm text-text-muted">A cleaner Twitch browsing experience.</p>
+        <h1 className="text-2xl font-semibold">live now</h1>
 
         {/* Error Display */}
         {error && (
           <div className="mt-6 bg-red-500/20 border border-red-500/30 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-red-300 font-medium">Failed to load streams</h3>
+                <h3 className="text-red-300 font-medium">failed to load streams</h3>
                 <p className="text-red-400 text-sm mt-1">{error}</p>
                 {error.includes("Twitch API not configured") && (
                   <p className="text-red-400 text-sm mt-2">
-                    Please set up your Twitch API credentials in the .env file. See README.md for instructions.
+                    please set up your twitch api credentials in the .env file. see readme.md for instructions.
                   </p>
                 )}
               </div>
@@ -98,7 +97,7 @@ export default function Home() {
                 onClick={retry}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
               >
-                Retry
+retry
               </button>
             </div>
           </div>
@@ -119,13 +118,13 @@ export default function Home() {
         {!loading && !error && items.length === 0 && (
           <div className="mt-6 text-center py-12">
             <div className="text-4xl mb-4">📺</div>
-            <h3 className="text-lg font-medium text-text">No streams found</h3>
-            <p className="text-text-muted mt-2">Try refreshing the page or check your connection.</p>
+            <h3 className="text-lg font-medium text-text">no streams found</h3>
+            <p className="text-text-muted mt-2">try refreshing the page or check your connection.</p>
           </div>
         )}
 
         <div ref={sentinelRef} className="h-16" />
-        {loading && <p className="mt-4 text-center text-sm text-text-muted">Loading…</p>}
+        {loading && <p className="mt-4 text-center text-sm text-text-muted">loading…</p>}
       </div>
     </ErrorBoundary>
   );

@@ -14,8 +14,8 @@ export default async function Watch({ params }: { params: { channel: string } })
   const { channel } = params;
 
   return (
-    <div className="grid gap-6 xl:grid-cols-5 lg:grid-cols-3">
-      <div className="xl:col-span-4 lg:col-span-2">
+    <div className="grid gap-6 xl:grid-cols-4 lg:grid-cols-3">
+      <div className="xl:col-span-3 lg:col-span-2">
         <ErrorBoundary>
           <WatchPlayer channel={channel} parent={parent} />
         </ErrorBoundary>

@@ -25,7 +25,7 @@ export default function Header() {
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Go to channel…"
+            placeholder="go to channel…"
             className="w-72 rounded-xl bg-bg px-3 py-2 text-sm outline-none ring-purple-500/30 focus:ring-2 border border-white/10"
           />
         </form>

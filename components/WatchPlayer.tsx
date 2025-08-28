@@ -18,6 +18,12 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     <div className="relative w-full">
       {/* Player Container - Larger like Twitch */}
       <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+        {/* Live label in top left corner */}
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-black/60 text-white text-sm font-medium px-3 py-1.5 rounded-lg backdrop-blur-sm">
+          <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
+          <span>live - {channel}</span>
+        </div>
+        
         <iframe 
           src={iframeSrc}
           className="w-full h-full"
@@ -29,14 +35,6 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           onLoad={() => console.log("Twitch player loaded successfully")}
           onError={(e) => console.error("Twitch player failed to load:", e)}
         />
-      </div>
-
-      {/* Stream Info */}
-      <div className="mt-4 text-sm text-text-muted">
-        <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-          <span className="font-medium">Live: {channel}</span>
-        </div>
       </div>
     </div>
   );

@@ -42,16 +42,11 @@ export default function LiveCard({ s }: { s: Stream }) {
             <div className="text-center text-text-muted">
               <div className="text-4xl mb-2">📺</div>
               <div className="text-sm font-medium">{s.user_name}</div>
-              <div className="text-xs">Live Stream</div>
+              <div className="text-xs">live stream</div>
             </div>
           </div>
         )}
         
-        {/* Live indicator */}
-        <div className="absolute top-2 left-2 flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-          LIVE
-        </div>
         
         {/* Viewer count */}
         <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-medium px-2 py-1 rounded">
