@@ -38,7 +38,7 @@ type Msg = {
   isMention: boolean;
 };
 
-export default function TwitchChat({ channel }: { channel: string }) {
+export default function TwitchChat({ channel, playerMode = "basic" }: { channel: string; playerMode?: "basic" | "enhanced" }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [replyingTo, setReplyingTo] = useState<Msg | null>(null);
@@ -303,8 +303,13 @@ export default function TwitchChat({ channel }: { channel: string }) {
     }
   }, []);
 
-  // Get channel ID and load emotes
+  // Get channel ID and load emotes (only in enhanced mode)
   useEffect(() => {
+    if (playerMode !== "enhanced") {
+      console.log("Basic mode: Skipping BTTV/FFZ emote loading");
+      return;
+    }
+
     const fetchChannelData = async () => {
       try {
         const res = await fetch(`/api/channel/${channel}`);
@@ -330,7 +335,7 @@ export default function TwitchChat({ channel }: { channel: string }) {
     };
     
     fetchChannelData();
-  }, [channel, fetchBttvEmotes, fetchFfzEmotes]);
+  }, [channel, fetchBttvEmotes, fetchFfzEmotes, playerMode]);
 
   useEffect(() => {
     const client = connectChat({ channel, username, oauth });

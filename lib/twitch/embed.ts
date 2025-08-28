@@ -25,6 +25,13 @@ export async function loadTwitchSDK(): Promise<any> {
     return twitchSDK;
   }
   
+  // Check for existing script FIRST to avoid race conditions
+  const existingScript = document.getElementById('twitch-embed-script');
+  if (existingScript) {
+    // Script already exists, return existing promise
+    return twitchSDKPromise;
+  }
+
   // Start loading the SDK via proxy
   twitchSDKPromise = new Promise<any>((resolve, reject) => {
     const script = document.createElement("script");
@@ -79,14 +86,6 @@ export async function loadTwitchSDK(): Promise<any> {
     
     script.addEventListener('load', handleLoad);
     script.addEventListener('error', handleError);
-    
-    // Enforce singleton - if script already exists, reuse the existing promise
-    const existingScript = document.getElementById('twitch-embed-script');
-    if (existingScript) {
-      // Script already loading/loaded, wait for current promise
-      cleanup();
-      return twitchSDKPromise;
-    }
     
     // Add to head
     document.head.appendChild(script);

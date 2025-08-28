@@ -27,7 +27,7 @@ export default async function Watch({ params }: { params: { channel: string } })
       <aside className="rounded-xl border border-white/5 bg-surface">
         <div className="h-[70vh]">
           <ErrorBoundary>
-            <TwitchChat channel={channel} />
+            <TwitchChat channel={channel} playerMode="basic" />
           </ErrorBoundary>
         </div>
       </aside>

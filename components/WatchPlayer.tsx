@@ -153,12 +153,29 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     cleanup();
 
     try {
+      // Check container visibility before creating embed
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const computedStyle = getComputedStyle(container);
+      
+      console.log("Container visibility check:", {
+        width: rect.width,
+        height: rect.height,
+        visibility: computedStyle.visibility,
+        display: computedStyle.display
+      });
+      
+      if (rect.width === 0 || rect.height === 0 || computedStyle.visibility === 'hidden') {
+        console.warn("Container not properly visible, waiting...");
+        await new Promise(resolve => requestAnimationFrame(resolve));
+      }
+
       // Check if SDK is already available
       if (!isTwitchSDKAvailable()) {
         console.log("Twitch SDK not available, attempting to load...");
       }
 
-      const embed = await createTwitchEmbed(containerRef.current, {
+      const embed = await createTwitchEmbed(container, {
         channel: channel.toLowerCase(),
         parent: parent,
         width: "100%",
@@ -413,9 +430,8 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
             src={iframeSrc}
             className="w-full h-full"
             allow="autoplay; fullscreen; picture-in-picture"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-pointer-lock allow-popups"
+            sandbox="allow-scripts allow-forms allow-pointer-lock allow-popups"
             referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
             scrolling="no"
             frameBorder="0"
             onLoad={() => console.log("Iframe loaded successfully")}
