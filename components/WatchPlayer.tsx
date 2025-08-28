@@ -33,17 +33,19 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     setIsClient(true);
     
     // Check environment variable for default mode
-    const envPlayerMode = process.env.NEXT_PUBLIC_PLAYER_MODE as PlayerMode;
-    const defaultMode = (envPlayerMode === 'enhanced' || envPlayerMode === 'iframe') 
-      ? envPlayerMode 
-      : 'iframe';
+    const envPlayerMode = process.env.NEXT_PUBLIC_PLAYER_MODE;
+    const defaultMode: PlayerMode = envPlayerMode === 'enhanced' 
+      ? 'js' 
+      : envPlayerMode === 'iframe' 
+        ? 'iframe' 
+        : 'iframe';
     
     const savedMode = localStorage.getItem("player-mode") as PlayerMode;
     if (savedMode && (savedMode === "js" || savedMode === "iframe")) {
       setPlayerMode(savedMode);
     } else {
-      setPlayerMode(defaultMode === 'enhanced' ? 'js' : 'iframe');
-      localStorage.setItem("player-mode", defaultMode === 'enhanced' ? 'js' : 'iframe');
+      setPlayerMode(defaultMode);
+      localStorage.setItem("player-mode", defaultMode);
     }
   }, []);
 
