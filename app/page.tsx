@@ -78,15 +78,15 @@ export default function Home() {
   return (
     <ErrorBoundary>
       <div>
-        <h1 className="text-2xl font-semibold">live now</h1>
+        <h1 className="text-3xl font-bold text-text mb-2">live now</h1>
 
         {/* Error Display */}
         {error && (
           <div className="mt-6 bg-red-500/20 border border-red-500/30 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-red-300 font-medium">failed to load streams</h3>
-                <p className="text-red-400 text-sm mt-1">{error}</p>
+                <h3 className="text-red-300 font-semibold text-base">failed to load streams</h3>
+                <p className="text-red-400 text-sm mt-2 leading-relaxed">{error}</p>
                 {error.includes("Twitch API not configured") && (
                   <p className="text-red-400 text-sm mt-2">
                     please set up your twitch api credentials in the .env file. see readme.md for instructions.
@@ -116,10 +116,10 @@ retry
 
         {/* Empty State */}
         {!loading && !error && items.length === 0 && (
-          <div className="mt-6 text-center py-12">
-            <div className="text-4xl mb-4">📺</div>
-            <h3 className="text-lg font-medium text-text">no streams found</h3>
-            <p className="text-text-muted mt-2">try refreshing the page or check your connection.</p>
+          <div className="mt-12 text-center py-16">
+            <div className="text-5xl mb-6">📺</div>
+            <h2 className="text-xl font-semibold text-text mb-3">no streams found</h2>
+            <p className="text-text-muted text-base leading-relaxed">try refreshing the page or check your connection.</p>
           </div>
         )}
 

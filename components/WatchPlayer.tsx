@@ -21,7 +21,7 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
         {/* Live label in top left corner */}
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-black/60 text-white text-sm font-medium px-3 py-1.5 rounded-lg backdrop-blur-sm">
           <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
-          <span>live - {channel}</span>
+          <span>live now - {channel}</span>
         </div>
         
         <iframe 

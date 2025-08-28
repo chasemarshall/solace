@@ -53,12 +53,13 @@ export default function LiveCard({ s }: { s: Stream }) {
           {fmtViewers(s.viewer_count)}
         </div>
       </div>
-      <div className="mt-2">
-        <div className="line-clamp-1 font-medium text-text">{s.title || s.user_name}</div>
-        <div className="text-sm text-text-muted">{s.user_name} • {fmtViewers(s.viewer_count)} watching</div>
+      <div className="mt-3">
+        <h3 className="line-clamp-2 font-semibold text-base text-text leading-tight mb-1">{s.title || s.user_name}</h3>
+        <div className="text-sm text-text-muted font-medium">{s.user_name}</div>
         {s.game_name && (
-          <div className="text-xs text-text-muted mt-1">{s.game_name}</div>
+          <div className="text-xs text-text-muted mt-1 font-medium">{s.game_name}</div>
         )}
+        <div className="text-xs text-text-muted mt-2 font-medium">{fmtViewers(s.viewer_count)} watching</div>
       </div>
     </Link>
   );
