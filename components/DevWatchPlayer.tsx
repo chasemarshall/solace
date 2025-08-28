@@ -11,7 +11,7 @@ interface PlayerProps {
 }
 
 export function DevWatchPlayer({ channel, parent }: PlayerProps) {
-  const [adBlockEnabled, setAdBlockEnabled] = useState(true);
+  const [adBlockEnabled, setAdBlockEnabled] = useState(false); // Start with ad blocking disabled
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [embedError, setEmbedError] = useState<string | null>(null);
   const [embedStatus, setEmbedStatus] = useState<'loading' | 'success' | 'error'>('loading');

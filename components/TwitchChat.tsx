@@ -447,7 +447,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       setMessages((m) => [
         ...m.slice(-99),
         {
-          id: tags.id || Date.now().toString(),
+          id: tags.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           user: tags.username || "",
           displayName: tags["display-name"] || tags.username || "",
           text: msg,

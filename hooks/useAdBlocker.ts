@@ -101,8 +101,8 @@ export function useAdBlocker(enabled: boolean = false): AdBlockerHook {
         return new Response('', { status: 204 });
       }
       
-      // Route Twitch requests through dev proxy for enhanced filtering
-      if (isTwitchRequest(url) && enabled) {
+      // Route only specific Twitch requests through dev proxy to avoid breaking embed
+      if (isTwitchRequest(url) && enabled && shouldProxy(url)) {
         try {
           const proxyType = getProxyType(url);
           const proxyUrl = `/api/dev-proxy?type=${proxyType}&url=${encodeURIComponent(url)}`;
@@ -170,6 +170,15 @@ function isTwitchRequest(url: string): boolean {
   return url.includes('twitch.tv') || 
          url.includes('ttvnw.net') || 
          url.includes('jtvnw.net');
+}
+
+function shouldProxy(url: string): boolean {
+  // Only proxy specific requests that we know are safe to intercept
+  return url.includes('.m3u8') || 
+         url.includes('usher.ttvnw.net') ||
+         url.includes('gql.twitch.tv') ||
+         url.includes('ads.twitch.tv') ||
+         url.includes('twitchads.com');
 }
 
 function getProxyType(url: string): string {

@@ -6,13 +6,27 @@ let cache: Cached = null;
 
 async function getAppToken(): Promise<string> {
   if (cache && Date.now() < cache.expiresAt - 60_000) return cache.token;
+  
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET environment variables");
+  }
+  
   const body = new URLSearchParams({
-    client_id: process.env.TWITCH_CLIENT_ID!,
-    client_secret: process.env.TWITCH_CLIENT_SECRET!,
+    client_id: clientId,
+    client_secret: clientSecret,
     grant_type: "client_credentials",
   });
+  
   const r = await fetch(TOK_URL, { method: "POST", body });
-  if (!r.ok) throw new Error(`Token fetch failed: ${r.status} ${await r.text()}`);
+  if (!r.ok) {
+    const errorText = await r.text();
+    console.error(`Twitch token fetch failed: ${r.status}`, errorText);
+    throw new Error(`Token fetch failed: ${r.status} ${errorText}`);
+  }
+  
   const j: any = await r.json();
   cache = { token: j.access_token, expiresAt: Date.now() + j.expires_in * 1000 };
   return cache.token;
