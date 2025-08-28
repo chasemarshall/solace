@@ -60,3 +60,127 @@ a:focus-visible {
   outline: 2px solid rgb(147, 51, 234);
   outline-offset: 2px;
 }
+
+/* Enhanced dev mode ad blocking styles for 2024-2025 */
+.dev-mode {
+  /* Hide traditional Twitch ad containers */
+  [data-a-target="video-ad-countdown"],
+  [data-a-target="video-ad-banner"],
+  [data-a-target="video-ad"],
+  [data-a-target="ad-banner"],
+  [data-a-target="ad-countdown"],
+  .video-ads,
+  .ads-video-overlay,
+  .video-overlay-ad,
+  .commercial-break-overlay,
+  .tw-ad-banner,
+  .tw-ad-countdown,
+  
+  /* Hide SSAI-related overlays */
+  [data-a-target="video-overlay-ad"],
+  [data-a-target="video-player-ad"],
+  .video-player__overlay--ad,
+  .video-player__ad-overlay,
+  .player-ad-notice,
+  .ad-notice,
+  
+  /* Hide ad-related UI components */
+  [class*="ad-banner"],
+  [class*="ad-overlay"],
+  [class*="commercial"],
+  [id*="ad-banner"],
+  [id*="ad-overlay"],
+  
+  /* Hide sponsored content markers */
+  [data-a-target="sponsored-label"],
+  [data-test-selector*="ad"],
+  .sponsored-shelf,
+  .promotion-shelf {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+  
+  /* Speed up ad-related animations */
+  .ad-countdown,
+  .commercial-break-countdown,
+  [class*="ad-timer"],
+  [class*="countdown"] {
+    animation-duration: 0.01s !important;
+    transition-duration: 0.01s !important;
+    animation-iteration-count: 0 !important;
+  }
+  
+  /* Hide ad loading states */
+  .video-loading-overlay:has([data-a-target*="ad"]),
+  .loading-overlay--ad,
+  [data-a-target="loading-overlay"]:has([class*="ad"]) {
+    display: none !important;
+  }
+  
+  /* Ensure video player remains visible during ad blocking */
+  .video-player,
+  .video-player__container,
+  .tw-video {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
+  }
+  
+  /* Hide ad-related popups and modals */
+  [data-a-target*="ad-modal"],
+  [class*="ad-modal"],
+  [class*="ad-popup"],
+  .tw-modal--ad,
+  .promotion-modal {
+    display: none !important;
+  }
+}
+
+/* Anti-detection styles */
+.dev-mode .video-ads-overlay,
+.dev-mode .preroll-ads,
+.dev-mode .midroll-ads {
+  /* Instead of hiding completely, make transparent to avoid detection */
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  left: -1px !important;
+  top: -1px !important;
+}
+
+/* Dev mode indicator styles */
+.dev-mode-indicator {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  z-index: 10000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(255,107,107,0.7); 
+  }
+  50% { 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 8px rgba(255,107,107,0); 
+  }
+}
