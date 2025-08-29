@@ -54,6 +54,10 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // Smooth auto-scroll animation state
+  const animationIdRef = useRef<number | null>(null);
+  const animatingRef = useRef(false);
+  const lastTimeRef = useRef<number | null>(null);
   // Get credentials from localStorage (set by UserProfile after OAuth)
   const [username, setUsername] = useState<string | undefined>();
   const [oauth, setOauth] = useState<string | undefined>();
@@ -596,21 +600,61 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     };
   }, [channel, username, oauth]);
 
-  // Auto scroll to bottom when new messages arrive
-  useEffect(() => {
-    const el = listRef.current;
-    if (el && isAutoScrolling && !userIsScrolling) {
-      // Use requestAnimationFrame to ensure DOM is updated
-      requestAnimationFrame(() => {
-        if (el && isAutoScrolling && !userIsScrolling) { // Check again in case state changed
-          el.scrollTo({
-            top: el.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
-      });
+  // Smooth auto-scroll helpers
+  const stopAutoScrollAnimation = useCallback(() => {
+    if (animationIdRef.current !== null) {
+      cancelAnimationFrame(animationIdRef.current);
+      animationIdRef.current = null;
     }
-  }, [messages, isAutoScrolling, userIsScrolling]);
+    animatingRef.current = false;
+    lastTimeRef.current = null;
+  }, []);
+
+  const stepSmoothAutoScroll = useCallback((ts: number) => {
+    const el = listRef.current;
+    if (!el || !isAutoScrolling || userIsScrolling) {
+      stopAutoScrollAnimation();
+      return;
+    }
+
+    const target = el.scrollHeight;
+    const current = el.scrollTop;
+    const distance = target - current;
+    if (Math.abs(distance) <= 1) {
+      el.scrollTop = target;
+      stopAutoScrollAnimation();
+      return;
+    }
+
+    const last = lastTimeRef.current;
+    const deltaMs = last == null ? 16 : Math.min(64, ts - last);
+    lastTimeRef.current = ts;
+
+    // Pixels per millisecond (e.g., 2.2 => ~2200 px/sec)
+    const speed = 2.2;
+    const step = Math.sign(distance) * Math.min(Math.abs(distance), speed * deltaMs);
+    el.scrollTop = current + step;
+
+    animationIdRef.current = requestAnimationFrame(stepSmoothAutoScroll);
+  }, [isAutoScrolling, stopAutoScrollAnimation, userIsScrolling]);
+
+  const startSmoothAutoScroll = useCallback(() => {
+    if (animatingRef.current) return;
+    animatingRef.current = true;
+    lastTimeRef.current = null;
+    animationIdRef.current = requestAnimationFrame(stepSmoothAutoScroll);
+  }, [stepSmoothAutoScroll]);
+
+  // Auto scroll to bottom when new messages arrive (smooth, resilient)
+  useEffect(() => {
+    if (!listRef.current) return;
+    if (!isAutoScrolling || userIsScrolling) {
+      stopAutoScrollAnimation();
+      return;
+    }
+    // Kick or keep the animation running toward the growing bottom
+    startSmoothAutoScroll();
+  }, [messages, isAutoScrolling, userIsScrolling, startSmoothAutoScroll, stopAutoScrollAnimation]);
 
   // Handle scroll detection
   useEffect(() => {
@@ -669,13 +713,54 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     };
   }, [isAutoScrolling]);
 
+  // Keep pinned to bottom when content resizes (e.g., images/emotes load)
+  useEffect(() => {
+    const container = listRef.current;
+    if (!container) return;
+
+    const contentEl = (container.firstElementChild as HTMLElement) || container;
+    let scheduled = false;
+
+    const ensureBottom = () => {
+      scheduled = false;
+      if (!listRef.current) return;
+      if (!isAutoScrolling || userIsScrolling) return;
+      // Nudge the smooth animation rather than jumping instantly
+      startSmoothAutoScroll();
+    };
+
+    const ro = new ResizeObserver(() => {
+      if (!isAutoScrolling || userIsScrolling) return;
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        ensureBottom();
+      });
+    });
+
+    try {
+      ro.observe(contentEl);
+    } catch {}
+
+    return () => {
+      ro.disconnect();
+    };
+  }, [isAutoScrolling, userIsScrolling, startSmoothAutoScroll]);
+
+  // Stop any running animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animationIdRef.current !== null) {
+        cancelAnimationFrame(animationIdRef.current);
+      }
+    };
+  }, []);
+
   const scrollToBottom = () => {
     const el = listRef.current;
     if (el) {
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior: 'smooth'
-      });
+      // Smooth only for user-initiated action
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
       setIsAutoScrolling(true);
       setShowScrollButton(false);
     }
@@ -812,7 +897,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(255,255,255,0.3) transparent',
-          scrollBehavior: 'smooth'
+          // Do not force smooth scrolling; we control it programmatically
         }}
       >
         <div className="p-1 space-y-0">
