@@ -56,7 +56,7 @@ export default function WatchPageClient({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsChatVisible(!isChatVisible)}
-              className="px-3 py-2 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
+              className="flex items-center gap-2 px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-lg backdrop-blur-sm transition-all duration-200 text-text hover:text-white"
               title={isChatVisible ? "hide chat" : "show chat"}
             >
               {isChatVisible ? (
@@ -64,13 +64,19 @@ export default function WatchPageClient({
               ) : (
                 <MessageSquare className="h-4 w-4" />
               )}
+              <span className="text-sm font-medium">
+                {isChatVisible ? "hide chat" : "show chat"}
+              </span>
             </button>
             <button
               onClick={() => setIsImmersiveMode(true)}
-              className="px-3 py-2 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
+              className="flex items-center gap-2 px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-lg backdrop-blur-sm transition-all duration-200 text-text hover:text-white"
               title="immersive mode"
             >
               <Maximize className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                immersive
+              </span>
             </button>
             <ErrorBoundary>
               <FavoriteButton channel={channel} />
