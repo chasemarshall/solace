@@ -815,7 +815,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           scrollBehavior: 'smooth'
         }}
       >
-        <div className="p-1 space-y-0.5">
+        <div className="p-1 space-y-0">
           {messages.map((m, msgIndex) => {
             const messageParts = parseMessage(m);
             
@@ -827,7 +827,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             return (
               <div 
                 key={m.id} 
-                className={`group relative px-3 py-1.5 transition-all duration-150 hover:bg-white/5 ${
+                className={`group relative px-3 py-1 transition-all duration-150 hover:bg-white/5 ${
                   m.isMention ? 'bg-purple-500/20 border-l-2 border-purple-400' : ''
                 } flex items-start gap-2`}
               >
@@ -857,7 +857,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                           const { emoji, title, description } = getBadgeInfo(badge.setID, badge.version);
                           return (
                             <Tooltip key={`${m.id}-badge-${badge.setID}-${badge.version}-${idx}`} content={`${title}: ${description}`}>
-                              <span className="text-sm leading-none cursor-help">
+                              <span className="text-xs leading-none cursor-help">
                                 {emoji}
                               </span>
                             </Tooltip>
