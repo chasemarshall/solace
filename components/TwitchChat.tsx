@@ -623,8 +623,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = el;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const isAtBottom = distanceFromBottom < 5; // Very small threshold for "at bottom"
-      const isNearBottom = distanceFromBottom < 100; // Larger threshold for "near bottom"
+      const isAtBottom = distanceFromBottom < 10; // Small threshold for "at bottom"
+      const isNearBottom = distanceFromBottom < 300; // Much larger threshold for "near bottom" - allows several messages below
       
       // Mark user as actively scrolling
       setUserIsScrolling(true);
@@ -653,7 +653,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         scrollTimeout = setTimeout(() => {
           // Check again if still near bottom before enabling
           const currentDistance = el.scrollHeight - el.scrollTop - el.clientHeight;
-          if (currentDistance < 100) {
+          if (currentDistance < 300) {
             setIsAutoScrolling(true);
             setShowScrollButton(false);
           }
