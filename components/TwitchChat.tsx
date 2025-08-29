@@ -58,6 +58,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const animationIdRef = useRef<number | null>(null);
   const animatingRef = useRef(false);
   const lastTimeRef = useRef<number | null>(null);
+  // Distinguish programmatic vs. user scrolls
+  const programmaticScrollRef = useRef(false);
   // Get credentials from localStorage (set by UserProfile after OAuth)
   const [username, setUsername] = useState<string | undefined>();
   const [oauth, setOauth] = useState<string | undefined>();
@@ -617,7 +619,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       return;
     }
 
-    const target = el.scrollHeight;
+    // Target the actual bottom scrollTop value
+    const target = Math.max(0, el.scrollHeight - el.clientHeight);
     const current = el.scrollTop;
     const distance = target - current;
     if (Math.abs(distance) <= 1) {
@@ -633,7 +636,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     // Pixels per millisecond (e.g., 2.2 => ~2200 px/sec)
     const speed = 2.2;
     const step = Math.sign(distance) * Math.min(Math.abs(distance), speed * deltaMs);
+    // Mark next scroll as programmatic so scroll handler ignores it
+    programmaticScrollRef.current = true;
     el.scrollTop = current + step;
+    // Clear the flag at the next tick after the event fires
+    setTimeout(() => {
+      programmaticScrollRef.current = false;
+    }, 0);
 
     animationIdRef.current = requestAnimationFrame(stepSmoothAutoScroll);
   }, [isAutoScrolling, stopAutoScrollAnimation, userIsScrolling]);
@@ -665,6 +674,10 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     let userScrollTimeout: NodeJS.Timeout;
 
     const handleScroll = () => {
+      // Ignore programmatic scroll steps
+      if (programmaticScrollRef.current) {
+        return;
+      }
       const { scrollTop, scrollHeight, clientHeight } = el;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       const isAtBottom = distanceFromBottom < 10; // Small threshold for "at bottom"
@@ -760,7 +773,12 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     const el = listRef.current;
     if (el) {
       // Smooth only for user-initiated action
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      programmaticScrollRef.current = true;
+      el.scrollTo({ top: Math.max(0, el.scrollHeight - el.clientHeight), behavior: 'smooth' });
+      // Clear after native smooth-scroll kicks a frame
+      setTimeout(() => {
+        programmaticScrollRef.current = false;
+      }, 0);
       setIsAutoScrolling(true);
       setShowScrollButton(false);
     }
