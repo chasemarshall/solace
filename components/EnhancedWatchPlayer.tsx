@@ -57,6 +57,7 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
           className="w-full h-full"
           allow="autoplay; fullscreen; picture-in-picture"
           sandbox="allow-same-origin allow-scripts allow-forms allow-pointer-lock allow-popups allow-storage-access-by-user-activation"
+          style={{ visibility: 'visible' }}
           referrerPolicy="strict-origin-when-cross-origin"
           scrolling="no"
           frameBorder="0"
