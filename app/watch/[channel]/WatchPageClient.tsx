@@ -28,7 +28,7 @@ export default function WatchPageClient({
 
   if (isImmersiveMode) {
     return (
-      <div className="w-full">
+      <div className="w-full" onClick={() => setIsImmersiveMode(false)}>
         <div className="w-full space-y-4">
           <ErrorBoundary>
             <WatchPlayer channel={channel} parent={parent} />
