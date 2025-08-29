@@ -30,7 +30,7 @@ export default function CookieConsent() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 max-w-md mx-auto">
-      <div className="bg-surface/95 backdrop-blur-sm border border-white/10 rounded-lg p-4 shadow-xl">
+      <div className="bg-surface/95 backdrop-blur-sm border border-white/10 rounded-xl p-4 shadow-xl">
         <div className="flex items-start gap-3">
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-white mb-2">

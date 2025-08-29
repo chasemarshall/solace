@@ -47,19 +47,11 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [ffzEmotes, setFfzEmotes] = useState<{ [key: string]: Emote }>({});
   const [seventvEmotes, setSeventvEmotes] = useState<{ [key: string]: Emote }>({});
   const [channelId, setChannelId] = useState<string>("");
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const [isLive, setIsLive] = useState<boolean | null>(null);
-  const [userIsScrolling, setUserIsScrolling] = useState(false);
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  // Smooth auto-scroll animation state
-  const animationIdRef = useRef<number | null>(null);
-  const animatingRef = useRef(false);
-  const lastTimeRef = useRef<number | null>(null);
-  // Distinguish programmatic vs. user scrolls
-  const programmaticScrollRef = useRef(false);
+  // Removed smooth scroll animation refs since we always auto-scroll
   // Get credentials from localStorage (set by UserProfile after OAuth)
   const [username, setUsername] = useState<string | undefined>();
   const [oauth, setOauth] = useState<string | undefined>();
@@ -575,129 +567,17 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     };
   }, [channel, username, oauth]);
 
-  // Smooth auto-scroll helpers
-  const stopAutoScrollAnimation = useCallback(() => {
-    if (animationIdRef.current !== null) {
-      cancelAnimationFrame(animationIdRef.current);
-      animationIdRef.current = null;
-    }
-    animatingRef.current = false;
-    lastTimeRef.current = null;
-  }, []);
+  // Removed smooth auto-scroll functions since we always auto-scroll immediately
 
-  const stepSmoothAutoScroll = useCallback((ts: number) => {
-    const el = listRef.current;
-    if (!el || !isAutoScrolling || userIsScrolling) {
-      stopAutoScrollAnimation();
-      return;
-    }
-
-    // Target the actual bottom scrollTop value
-    const target = Math.max(0, el.scrollHeight - el.clientHeight);
-    const current = el.scrollTop;
-    const distance = target - current;
-    if (Math.abs(distance) <= 1) {
-      el.scrollTop = target;
-      stopAutoScrollAnimation();
-      return;
-    }
-
-    const last = lastTimeRef.current;
-    const deltaMs = last == null ? 16 : Math.min(64, ts - last);
-    lastTimeRef.current = ts;
-
-    // Pixels per millisecond (e.g., 2.2 => ~2200 px/sec)
-    const speed = 2.2;
-    const step = Math.sign(distance) * Math.min(Math.abs(distance), speed * deltaMs);
-    // Mark next scroll as programmatic so scroll handler ignores it
-    programmaticScrollRef.current = true;
-    el.scrollTop = current + step;
-    // Clear the flag at the next tick after the event fires
-    setTimeout(() => {
-      programmaticScrollRef.current = false;
-    }, 0);
-
-    animationIdRef.current = requestAnimationFrame(stepSmoothAutoScroll);
-  }, [isAutoScrolling, stopAutoScrollAnimation, userIsScrolling]);
-
-  const startSmoothAutoScroll = useCallback(() => {
-    if (animatingRef.current) return;
-    animatingRef.current = true;
-    lastTimeRef.current = null;
-    animationIdRef.current = requestAnimationFrame(stepSmoothAutoScroll);
-  }, [stepSmoothAutoScroll]);
-
-  // Auto scroll to bottom when new messages arrive (smooth, resilient)
+  // Auto scroll to bottom when new messages arrive (always scroll)
   useEffect(() => {
     if (!listRef.current) return;
-    if (!isAutoScrolling || userIsScrolling) {
-      stopAutoScrollAnimation();
-      return;
-    }
-    // Kick or keep the animation running toward the growing bottom
-    startSmoothAutoScroll();
-  }, [messages, isAutoScrolling, userIsScrolling, startSmoothAutoScroll, stopAutoScrollAnimation]);
-
-  // Handle scroll detection
-  useEffect(() => {
+    // Always scroll to bottom immediately when new messages arrive
     const el = listRef.current;
-    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
-    let scrollTimeout: NodeJS.Timeout;
-    let userScrollTimeout: NodeJS.Timeout;
-
-    const handleScroll = () => {
-      // Ignore programmatic scroll steps
-      if (programmaticScrollRef.current) {
-        return;
-      }
-      const { scrollTop, scrollHeight, clientHeight } = el;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const isAtBottom = distanceFromBottom < 10; // Small threshold for "at bottom"
-      const isNearBottom = distanceFromBottom < 300; // Much larger threshold for "near bottom" - allows several messages below
-      
-      // Mark user as actively scrolling
-      setUserIsScrolling(true);
-      
-      // Clear previous timeouts
-      clearTimeout(scrollTimeout);
-      clearTimeout(userScrollTimeout);
-      
-      // Stop marking user as scrolling after they stop
-      userScrollTimeout = setTimeout(() => {
-        setUserIsScrolling(false);
-      }, 150);
-      
-      // If user scrolled up from bottom, pause auto-scrolling immediately
-      if (!isNearBottom && isAutoScrolling) {
-        setIsAutoScrolling(false);
-        setShowScrollButton(true);
-      } 
-      // If user is at the very bottom, enable auto-scrolling immediately
-      else if (isAtBottom && !isAutoScrolling) {
-        setIsAutoScrolling(true);
-        setShowScrollButton(false);
-      }
-      // If user scrolled back near bottom (but not at bottom), resume auto-scrolling after delay
-      else if (isNearBottom && !isAtBottom && !isAutoScrolling) {
-        scrollTimeout = setTimeout(() => {
-          // Check again if still near bottom before enabling
-          const currentDistance = el.scrollHeight - el.scrollTop - el.clientHeight;
-          if (currentDistance < 300) {
-            setIsAutoScrolling(true);
-            setShowScrollButton(false);
-          }
-        }, 500);
-      }
-    };
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      el.removeEventListener('scroll', handleScroll);
-      clearTimeout(scrollTimeout);
-      clearTimeout(userScrollTimeout);
-    };
-  }, [isAutoScrolling]);
+  // Remove scroll detection since we always auto-scroll now
 
   // Keep pinned to bottom when content resizes (e.g., images/emotes load)
   useEffect(() => {
@@ -705,24 +585,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     if (!container) return;
 
     const contentEl = (container.firstElementChild as HTMLElement) || container;
-    let scheduled = false;
 
     const ensureBottom = () => {
-      scheduled = false;
       if (!listRef.current) return;
-      if (!isAutoScrolling || userIsScrolling) return;
-      // Nudge the smooth animation rather than jumping instantly
-      startSmoothAutoScroll();
+      listRef.current.scrollTop = listRef.current.scrollHeight;
     };
 
-    const ro = new ResizeObserver(() => {
-      if (!isAutoScrolling || userIsScrolling) return;
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        ensureBottom();
-      });
-    });
+    const ro = new ResizeObserver(ensureBottom);
 
     try {
       ro.observe(contentEl);
@@ -731,31 +600,9 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     return () => {
       ro.disconnect();
     };
-  }, [isAutoScrolling, userIsScrolling, startSmoothAutoScroll]);
-
-  // Stop any running animation on unmount
-  useEffect(() => {
-    return () => {
-      if (animationIdRef.current !== null) {
-        cancelAnimationFrame(animationIdRef.current);
-      }
-    };
   }, []);
 
-  const scrollToBottom = () => {
-    const el = listRef.current;
-    if (el) {
-      // Smooth only for user-initiated action
-      programmaticScrollRef.current = true;
-      el.scrollTo({ top: Math.max(0, el.scrollHeight - el.clientHeight), behavior: 'smooth' });
-      // Clear after native smooth-scroll kicks a frame
-      setTimeout(() => {
-        programmaticScrollRef.current = false;
-      }, 0);
-      setIsAutoScrolling(true);
-      setShowScrollButton(false);
-    }
-  };
+  // Removed scroll functions since we always auto-scroll
 
   // Parse message with emotes
   const parseMessage = useCallback((message: Msg) => {
@@ -883,12 +730,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       {/* Messages */}
       <div 
         ref={listRef} 
-        className="flex-1 overflow-y-auto overflow-x-hidden"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255,255,255,0.3) transparent',
-          // Do not force smooth scrolling; we control it programmatically
-        }}
+        className="flex-1 overflow-y-hidden overflow-x-hidden"
       >
         <div className="p-1 space-y-0">
           {messages.map((m, msgIndex) => {
@@ -1079,20 +921,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           />
         </form>
 
-        {/* Scroll to bottom button */}
-        {showScrollButton && (
-          <div className="absolute bottom-20 right-4 z-10">
-            <button
-              onClick={scrollToBottom}
-              className="bg-purple-600 hover:bg-purple-700 text-white rounded-full p-3 shadow-lg transition-all duration-200 hover:scale-110"
-              title="Scroll to bottom"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </button>
-          </div>
-        )}
+        {/* Removed scroll button since we always auto-scroll */}
       </div>
     </div>
   );
