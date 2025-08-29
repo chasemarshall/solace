@@ -28,7 +28,7 @@ export default function WatchPageClient({
 
   if (isImmersiveMode) {
     return (
-      <div className="fixed inset-0 z-50 bg-black">
+      <div className="w-full">
         <ErrorBoundary>
           <WatchPlayer channel={channel} parent={parent} />
         </ErrorBoundary>
