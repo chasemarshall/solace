@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MessageSquare, MessageSquareOff } from "lucide-react";
 
 interface WatchPageClientProps {
   channel: string;
@@ -41,10 +42,20 @@ export default function WatchPageClient({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsChatVisible(!isChatVisible)}
-              className="rounded-lg bg-surface border border-white/10 px-3 py-2 text-sm text-text hover:bg-white/5 transition-all duration-200"
-              title={isChatVisible ? "Hide chat" : "Show chat"}
+              className="rounded-lg bg-surface border border-white/10 px-3 py-2 text-sm text-text hover:bg-white/5 transition-all duration-200 flex items-center gap-2"
+              title={isChatVisible ? "hide chat" : "show chat"}
             >
-              {isChatVisible ? "Hide chat" : "Show chat"}
+              {isChatVisible ? (
+                <>
+                  <MessageSquareOff className="h-4 w-4" />
+                  hide chat
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="h-4 w-4" />
+                  show chat
+                </>
+              )}
             </button>
             <ErrorBoundary>
               <FavoriteButton channel={channel} />

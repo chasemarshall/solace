@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connectChat } from "@/lib/twitch/chat";
+import { Tooltip } from "./Tooltip";
 
 type Badge = {
   setID: string;
@@ -44,6 +45,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [replyingTo, setReplyingTo] = useState<Msg | null>(null);
   const [bttvEmotes, setBttvEmotes] = useState<{ [key: string]: Emote }>({});
   const [ffzEmotes, setFfzEmotes] = useState<{ [key: string]: Emote }>({});
+  const [seventvEmotes, setSeventvEmotes] = useState<{ [key: string]: Emote }>({});
   const [channelId, setChannelId] = useState<string>("");
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -272,7 +274,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     }
   }, []);
 
-  // Fetch FFZ emotes
+  // Fetch FFZ emotes with fixed CDN URLs
   const fetchFfzEmotes = useCallback(async (channelName: string) => {
     try {
       // Always fetch global emotes with timeout
@@ -301,16 +303,16 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
       const allFfzEmotes: { [key: string]: Emote } = {};
       
-      // Add global emotes
+      // Add global emotes with fixed CDN URLs
       Object.values(globalData.sets || {}).forEach((set: any) => {
         Object.values(set.emoticons || {}).forEach((emote: any) => {
           allFfzEmotes[emote.name] = {
             id: emote.id.toString(),
             name: emote.name,
             urls: {
-              "1": `https:${emote.urls["1"]}`,
-              "2": `https:${emote.urls["2"] || emote.urls["1"]}`,
-              "4": `https:${emote.urls["4"] || emote.urls["2"] || emote.urls["1"]}`,
+              "1": `https://cdn.frankerfacez.com/emoticon/${emote.id}/1`,
+              "2": `https://cdn.frankerfacez.com/emoticon/${emote.id}/2`,
+              "4": `https://cdn.frankerfacez.com/emoticon/${emote.id}/4`,
             }
           };
         });
@@ -328,9 +330,9 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                   id: emote.id.toString(),
                   name: emote.name,
                   urls: {
-                    "1": `https:${emote.urls["1"]}`,
-                    "2": `https:${emote.urls["2"] || emote.urls["1"]}`,
-                    "4": `https:${emote.urls["4"] || emote.urls["2"] || emote.urls["1"]}`,
+                    "1": `https://cdn.frankerfacez.com/emoticon/${emote.id}/1`,
+                    "2": `https://cdn.frankerfacez.com/emoticon/${emote.id}/2`,
+                    "4": `https://cdn.frankerfacez.com/emoticon/${emote.id}/4`,
                   }
                 };
               });
@@ -353,6 +355,84 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     } catch (e) {
       console.error("❌ Failed to fetch FFZ emotes:", e);
       setFfzEmotes({});
+    }
+  }, []);
+
+  // Fetch 7TV emotes
+  const fetchSeventvEmotes = useCallback(async (channelName: string, roomId?: string) => {
+    try {
+      // Always fetch global emotes with timeout
+      console.log("📡 Fetching 7TV global emotes...");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      let globalRes: Response;
+      try {
+        globalRes = await fetch(
+          "https://7tv.io/v3/emote-sets/global",
+          { signal: controller.signal }
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      
+      if (!globalRes.ok) {
+        throw new Error(`7TV global API returned ${globalRes.status}`);
+      }
+      
+      const globalData = await globalRes.json();
+      
+      if (!globalData.emotes) {
+        throw new Error("7TV global API returned invalid data format");
+      }
+
+      const allSeventvEmotes: { [key: string]: Emote } = {};
+      
+      // Add global emotes
+      globalData.emotes.forEach((emote: any) => {
+        allSeventvEmotes[emote.name] = {
+          id: emote.id,
+          name: emote.name,
+          urls: {
+            "1": `https://cdn.7tv.app/emote/${emote.id}/1x.webp`,
+            "2": `https://cdn.7tv.app/emote/${emote.id}/2x.webp`,
+            "4": `https://cdn.7tv.app/emote/${emote.id}/3x.webp`,
+          }
+        };
+      });
+
+      // Try to fetch channel-specific emotes if we have the room ID
+      if (roomId) {
+        try {
+          const channelRes = await fetch(`https://7tv.io/v3/users/twitch/${roomId}`);
+          if (channelRes.ok) {
+            const channelData = await channelRes.json();
+            if (channelData?.emote_set?.emotes) {
+              channelData.emote_set.emotes.forEach((emote: any) => {
+                allSeventvEmotes[emote.name] = {
+                  id: emote.id,
+                  name: emote.name,
+                  urls: {
+                    "1": `https://cdn.7tv.app/emote/${emote.id}/1x.webp`,
+                    "2": `https://cdn.7tv.app/emote/${emote.id}/2x.webp`,
+                    "4": `https://cdn.7tv.app/emote/${emote.id}/3x.webp`,
+                  }
+                };
+              });
+            }
+          }
+        } catch (e) {
+          console.log("No 7TV channel emotes found for", channelName);
+        }
+      }
+      
+      setSeventvEmotes(allSeventvEmotes);
+      console.log(`✅ Loaded ${Object.keys(allSeventvEmotes).length} 7TV emotes for ${channelName}`);
+      if (Object.keys(allSeventvEmotes).length > 0) {
+        console.log("📺 7TV emotes:", Object.keys(allSeventvEmotes).slice(0, 5).join(', '), '...');
+      }
+    } catch (e) {
+      console.error("❌ Failed to fetch 7TV emotes:", e);
+      setSeventvEmotes({});
     }
   }, []);
 
@@ -389,7 +469,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           // Load emotes with proper IDs
           await Promise.all([
             fetchBttvEmotes(channel, userId),
-            fetchFfzEmotes(channel)
+            fetchFfzEmotes(channel),
+            fetchSeventvEmotes(channel, userId)
           ]);
         } else {
           console.warn(`⚠️ Channel API returned ${res.status}, loading global emotes only`);
@@ -402,15 +483,26 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         console.log("🔄 Falling back to global emotes only");
         await Promise.all([
           fetchBttvEmotes(channel),
-          fetchFfzEmotes(channel)
+          fetchFfzEmotes(channel),
+          fetchSeventvEmotes(channel)
         ]);
       }
     };
     
     fetchChannelData();
-  }, [channel, fetchBttvEmotes, fetchFfzEmotes, playerMode]);
+  }, [channel, fetchBttvEmotes, fetchFfzEmotes, fetchSeventvEmotes, playerMode]);
 
   useEffect(() => {
+    // Clean up any existing client first
+    if (clientRef.current) {
+      try {
+        clientRef.current.disconnect();
+      } catch (e) {
+        console.warn('Error disconnecting previous client:', e);
+      }
+      clientRef.current = null;
+    }
+    
     const client = connectChat({ channel, username, oauth });
     clientRef.current = client;
     
@@ -444,21 +536,35 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       // Check if message mentions the current user
       const isMention = Boolean(username && msg.toLowerCase().includes(`@${username.toLowerCase()}`));
 
-      setMessages((m) => [
-        ...m.slice(-99),
-        {
-          id: tags.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          user: tags.username || "",
-          displayName: tags["display-name"] || tags.username || "",
-          text: msg,
-          color: tags.color,
-          badges,
-          emotes: tags.emotes || {},
-          timestamp: new Date(),
-          replyTo,
-          isMention
-        },
-      ]);
+      const messageId = tags.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${tags.username || 'anon'}`;
+      
+      setMessages((prevMessages) => {
+        // Check if this message already exists to prevent duplicates
+        const existingMessage = prevMessages.find(m => m.id === messageId);
+        if (existingMessage) {
+          // Only log occasionally to avoid spam
+          if (Math.random() < 0.1) {
+            console.log('🚫 Duplicate messages prevented (this log shown 10% of time)');
+          }
+          return prevMessages;
+        }
+        
+        return [
+          ...prevMessages.slice(-99),
+          {
+            id: messageId,
+            user: tags.username || "",
+            displayName: tags["display-name"] || tags.username || "",
+            text: msg,
+            color: tags.color,
+            badges,
+            emotes: tags.emotes || {},
+            timestamp: new Date(),
+            replyTo,
+            isMention
+          },
+        ];
+      });
     });
 
     return () => {
@@ -565,7 +671,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             content: word.replace(/__TWITCH_\d+__/, `twitch_emote_${emoteId}`),
             emoteUrl
           });
-          console.log(`🎮 Twitch emote found: ID ${emoteId}, URL: ${emoteUrl}`);
+          // Reduced logging for emotes
         }
       } else if (bttvEmotes[word]) {
         const emoteUrl = bttvEmotes[word].urls["1"];
@@ -574,7 +680,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           content: word,
           emoteUrl
         });
-        console.log(`🎭 BTTV emote found: ${word}, URL: ${emoteUrl}`);
+        // Reduced logging for emotes
       } else if (ffzEmotes[word]) {
         const emoteUrl = ffzEmotes[word].urls["1"];
         parts.push({
@@ -582,7 +688,15 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           content: word,
           emoteUrl
         });
-        console.log(`🐸 FFZ emote found: ${word}, URL: ${emoteUrl}`);
+        // Reduced logging for emotes
+      } else if (seventvEmotes[word]) {
+        const emoteUrl = seventvEmotes[word].urls["1"];
+        parts.push({
+          type: 'emote',
+          content: word,
+          emoteUrl
+        });
+        // Reduced logging for emotes
       } else {
         parts.push({
           type: 'text',
@@ -597,7 +711,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     });
 
     return parts;
-  }, [bttvEmotes, ffzEmotes]);
+  }, [bttvEmotes, ffzEmotes, seventvEmotes]);
 
   const handleReply = (message: Msg) => {
     if (!canSend) return;
@@ -628,9 +742,12 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     <div className="flex h-full flex-col bg-surface overflow-hidden rounded-xl">
       {/* Header */}
       <div className="bg-surface border-b border-white/10 p-3 rounded-t-xl">
-        <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${isLive === true ? 'bg-red-500 animate-pulse' : isLive === false ? 'bg-gray-500' : 'bg-gray-500 animate-pulse'}`}></div>
-          <span className="text-sm font-bold text-white tracking-wide">live chat</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${isLive === true ? 'bg-red-500 animate-pulse' : isLive === false ? 'bg-gray-500' : 'bg-gray-500 animate-pulse'}`}></div>
+            <span className="text-sm font-bold text-white tracking-wide">live chat</span>
+          </div>
+          <ChatAuth onAuthChange={handleAuthChange} />
         </div>
       </div>
 
@@ -640,7 +757,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         className="flex-1 overflow-y-auto overflow-x-hidden"
         style={{
           scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255,255,255,0.3) transparent'
+          scrollbarColor: 'rgba(255,255,255,0.3) transparent',
+          scrollBehavior: 'smooth'
         }}
       >
         <div className="p-1 space-y-0.5">
@@ -684,13 +802,11 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                         {m.badges.map((badge, idx) => {
                           const { emoji, title, description } = getBadgeInfo(badge.setID, badge.version);
                           return (
-                            <span
-                              key={`${badge.setID}-${badge.version}-${idx}`}
-                              className="text-sm leading-none"
-                              title={`${title}: ${description}`}
-                            >
-                              {emoji}
-                            </span>
+                            <Tooltip key={`${m.id}-badge-${badge.setID}-${badge.version}-${idx}`} content={`${title}: ${description}`}>
+                              <span className="text-sm leading-none cursor-help">
+                                {emoji}
+                              </span>
+                            </Tooltip>
                           );
                         })}
 
@@ -708,33 +824,34 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                       {/* Message text on same line */}
                       <span className="leading-relaxed text-text break-words ml-1">
                         {messageParts.map((part, idx) => {
+                          const partKey = `${m.id}-part-${idx}-${part.content.slice(0, 10)}`;
                           if (part.type === 'emote' && part.emoteUrl) {
                             return (
-                              <img
-                                key={idx}
-                                src={part.emoteUrl}
-                                alt={part.content}
-                                title={part.content}
-                                className="inline-block h-6 w-6 align-middle mx-0.5"
-                                onError={(e) => {
-                                  console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
-                                  (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                                onLoad={() => {
-                                  console.log(`✅ Loaded emote: ${part.content}`);
-                                }}
-                              />
+                              <Tooltip key={partKey} content={part.content}>
+                                <img
+                                  src={part.emoteUrl}
+                                  alt={part.content}
+                                  className="inline-block h-6 w-6 align-middle mx-0.5 cursor-help"
+                                  onError={(e) => {
+                                    console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                  onLoad={() => {
+                                    console.log(`✅ Loaded emote: ${part.content}`);
+                                  }}
+                                />
+                              </Tooltip>
                             );
                           } else {
                             // Handle mentions highlighting
                             if (part.content.startsWith('@')) {
                               return (
-                                <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
+                                <span key={partKey} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
                                   {part.content}
                                 </span>
                               );
                             }
-                            return <span key={idx}>{part.content}</span>;
+                            return <span key={partKey}>{part.content}</span>;
                           }
                         })}
                       </span>
@@ -745,33 +862,34 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                   {sameUser && !m.replyTo && (
                     <div className="leading-relaxed text-text break-words text-sm ml-6">
                       {messageParts.map((part, idx) => {
+                        const partKey = `${m.id}-grouped-part-${idx}-${part.content.slice(0, 10)}`;
                         if (part.type === 'emote' && part.emoteUrl) {
                           return (
-                            <img
-                              key={idx}
-                              src={part.emoteUrl}
-                              alt={part.content}
-                              title={part.content}
-                              className="inline-block h-6 w-6 align-middle mx-0.5"
-                              onError={(e) => {
-                                console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                              onLoad={() => {
-                                console.log(`✅ Loaded emote: ${part.content}`);
-                              }}
-                            />
+                            <Tooltip key={partKey} content={part.content}>
+                              <img
+                                src={part.emoteUrl}
+                                alt={part.content}
+                                className="inline-block h-6 w-6 align-middle mx-0.5 cursor-help"
+                                onError={(e) => {
+                                  console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                                onLoad={() => {
+                                  console.log(`✅ Loaded emote: ${part.content}`);
+                                }}
+                              />
+                            </Tooltip>
                           );
                         } else {
                           // Handle mentions highlighting
                           if (part.content.startsWith('@')) {
                             return (
-                              <span key={idx} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
+                              <span key={partKey} className="text-purple-300 font-semibold bg-purple-900/30 px-1 rounded">
                                 {part.content}
                               </span>
                             );
                           }
-                          return <span key={idx}>{part.content}</span>;
+                          return <span key={partKey}>{part.content}</span>;
                         }
                       })}
                     </div>
@@ -823,18 +941,18 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         )}
 
         {/* Input form */}
-        <form className="p-3">
+        <form className="p-3" onSubmit={onSubmit}>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                // Chat functionality coming soon
-                console.log('Message would be sent:', input);
+                onSubmit(e);
               }
             }}
-            className="w-full rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200"
+            disabled={!canSend}
+            className="w-full rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="type here."
             maxLength={500}
           />
