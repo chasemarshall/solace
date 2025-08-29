@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MessageSquare, MessageSquareOff } from "lucide-react";
+import { MessageSquare, MessageSquareOff, Maximize } from "lucide-react";
+import { useImmersive } from "@/contexts/ImmersiveContext";
 
 interface WatchPageClientProps {
   channel: string;
@@ -23,6 +24,17 @@ export default function WatchPageClient({
   StreamStatus
 }: WatchPageClientProps) {
   const [isChatVisible, setIsChatVisible] = useState(true);
+  const { isImmersiveMode, setIsImmersiveMode } = useImmersive();
+
+  if (isImmersiveMode) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <ErrorBoundary>
+          <WatchPlayer channel={channel} parent={parent} />
+        </ErrorBoundary>
+      </div>
+    );
+  }
 
   return (
     <div className={`${isChatVisible ? 'grid grid-cols-1 xl:grid-cols-4 lg:grid-cols-3 gap-6' : 'w-full'}`}>
@@ -39,23 +51,24 @@ export default function WatchPageClient({
               <StreamStatus channel={channel} />
             </ErrorBoundary>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsChatVisible(!isChatVisible)}
-              className="rounded-lg bg-surface border border-white/10 px-3 py-2 text-sm text-text hover:bg-white/5 transition-all duration-200 flex items-center gap-2"
+              className="w-8 h-8 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
               title={isChatVisible ? "hide chat" : "show chat"}
             >
               {isChatVisible ? (
-                <>
-                  <MessageSquareOff className="h-4 w-4" />
-                  hide chat
-                </>
+                <MessageSquareOff className="h-4 w-4" />
               ) : (
-                <>
-                  <MessageSquare className="h-4 w-4" />
-                  show chat
-                </>
+                <MessageSquare className="h-4 w-4" />
               )}
+            </button>
+            <button
+              onClick={() => setIsImmersiveMode(true)}
+              className="w-8 h-8 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
+              title="immersive mode"
+            >
+              <Maximize className="h-4 w-4" />
             </button>
             <ErrorBoundary>
               <FavoriteButton channel={channel} />

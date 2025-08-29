@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Header from "@/components/Header";
+import { ImmersiveProvider } from "@/contexts/ImmersiveContext";
+import LayoutContent from "@/components/LayoutContent";
 
 export const metadata: Metadata = {
   title: "solace. - home",
@@ -21,10 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-bg text-text min-h-screen">
-        <Header />
-        <main className="container mx-auto px-4 max-w-7xl">
-          {children}
-        </main>
+        <ImmersiveProvider>
+          <LayoutContent>
+            {children}
+          </LayoutContent>
+        </ImmersiveProvider>
       </body>
     </html>
   );

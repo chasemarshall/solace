@@ -1,16 +1,40 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function WatchPlayer({ channel, parent }: { channel: string; parent: string }) {
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check for stored auth token
+    const storedAuth = localStorage.getItem('twitch_auth');
+    if (storedAuth) {
+      try {
+        const parsedAuth = JSON.parse(storedAuth);
+        if (parsedAuth.expires_at && Date.now() < parsedAuth.expires_at) {
+          setAuthToken(parsedAuth.tokens.access_token);
+        }
+      } catch (e) {
+        console.error('Failed to parse stored auth:', e);
+      }
+    }
+  }, []);
+
   // Get iframe source with proper parent domain
   const getIframeSrc = useCallback(() => {
     // Use the parent environment variable directly
     const parentDomain = parent || 'localhost';
     
     // Enhanced iframe URL with Twitch player features
-    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true`;
-  }, [channel, parent]);
+    let baseUrl = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true`;
+    
+    // Add auth token if available
+    if (authToken) {
+      baseUrl += `&token=${encodeURIComponent(authToken)}`;
+    }
+    
+    return baseUrl;
+  }, [channel, parent, authToken]);
 
   const iframeSrc = getIframeSrc();
 
