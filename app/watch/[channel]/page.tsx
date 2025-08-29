@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import WatchPlayer from "@/components/WatchPlayer";
+import EnhancedWatchPlayer from "@/components/EnhancedWatchPlayer";
 import TwitchChat from "@/components/TwitchChat";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import FavoriteButton from "@/components/FavoriteButton";
@@ -20,7 +20,7 @@ export default function Watch({ params }: { params: { channel: string } }) {
     <WatchPageClient 
       channel={channel}
       parent={parent}
-      WatchPlayer={WatchPlayer}
+      WatchPlayer={EnhancedWatchPlayer}
       TwitchChat={TwitchChat}
       ErrorBoundary={ErrorBoundary}
       FavoriteButton={FavoriteButton}
