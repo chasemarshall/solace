@@ -104,29 +104,29 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
 
   if (authData) {
     const user = authData.user;
+    
+    const handleProfileClick = () => {
+      if (confirm(`Logout from ${user.display_name}?`)) {
+        handleLogout();
+      }
+    };
+
     return (
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center overflow-hidden">
-            {user.profile_image_url ? (
-              <img
-                src={user.profile_image_url}
-                alt={user.display_name}
-                className="w-8 h-8 object-cover"
-              />
-            ) : (
-              <User className="w-4 h-4 text-white" />
-            )}
-          </div>
-          <span className="text-sm font-medium text-white">{user.display_name}</span>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="text-xs text-text-muted hover:text-white transition-colors"
-        >
-          logout
-        </button>
-      </div>
+      <button
+        onClick={handleProfileClick}
+        className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-purple-500/50 transition-all duration-200"
+        title={`${user.display_name} - Click to logout`}
+      >
+        {user.profile_image_url ? (
+          <img
+            src={user.profile_image_url}
+            alt={user.display_name}
+            className="w-8 h-8 object-cover"
+          />
+        ) : (
+          <User className="w-4 h-4 text-white" />
+        )}
+      </button>
     );
   }
 
