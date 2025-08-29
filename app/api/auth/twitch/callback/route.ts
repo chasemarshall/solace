@@ -5,25 +5,25 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const error = searchParams.get('error');
 
-  if (error) {
-    return NextResponse.redirect(new URL('/?auth_error=' + encodeURIComponent(error), request.url));
-  }
-
-  if (!code) {
-    return NextResponse.redirect(new URL('/?auth_error=no_code', request.url));
-  }
-
-  const clientId = process.env.TWITCH_CLIENT_ID;
-  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
   // Dynamically determine the site URL from the request
   const protocol = request.headers.get('x-forwarded-proto') || 'https';
   const host = request.headers.get('host') || request.headers.get('x-forwarded-host');
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${protocol}://${host}`;
-  
+
+  if (error) {
+    return NextResponse.redirect(new URL('/?auth_error=' + encodeURIComponent(error), siteUrl));
+  }
+
+  if (!code) {
+    return NextResponse.redirect(new URL('/?auth_error=no_code', siteUrl));
+  }
+
+  const clientId = process.env.TWITCH_CLIENT_ID;
+  const clientSecret = process.env.TWITCH_CLIENT_SECRET;
   const redirectUri = `${siteUrl}/api/auth/twitch/callback`;
 
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/?auth_error=config_error', request.url));
+    return NextResponse.redirect(new URL('/?auth_error=config_error', siteUrl));
   }
 
   try {
@@ -82,13 +82,13 @@ export async function GET(request: NextRequest) {
     };
 
     // Create response with auth data in URL hash
-    const redirectUrl = new URL('/', request.url);
+    const redirectUrl = new URL('/', siteUrl);
     redirectUrl.hash = `auth_success=${encodeURIComponent(JSON.stringify(authData))}`;
     
     return NextResponse.redirect(redirectUrl);
     
   } catch (error) {
     console.error('OAuth callback error:', error);
-    return NextResponse.redirect(new URL('/?auth_error=callback_error', request.url));
+    return NextResponse.redirect(new URL('/?auth_error=callback_error', siteUrl));
   }
 }
