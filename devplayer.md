@@ -34,14 +34,26 @@ Twitch's GraphQL endpoint (`https://gql.twitch.tv/gql`) handles:
 - Batch requests for efficient data loading
 - Ad targeting and delivery instructions
 
-## Multi-Layer Ad Blocking Architecture
+## Advanced Multi-Layer Ad Blocking Architecture (2025)
 
-The dev player uses a comprehensive 5-layer approach:
-1. **Network-level proxy filtering** (Domain & request blocking)
-2. **HLS manifest manipulation** (SCTE-35 marker removal)
-3. **GraphQL query interception** (GQL ad query blocking)
-4. **Client-side request filtering** (Service workers & fetch interception)
-5. **DOM manipulation & CSS blocking** (Fallback visual blocking)
+The dev player uses a comprehensive 8-layer approach to eliminate embedded ads:
+
+### Phase 1: Prevention Layers
+1. **Stream Source Proxy** (Alternative stream acquisition)
+2. **HLS Manifest Deep Filtering** (SCTE-35 + segment analysis)
+3. **GraphQL Query Interception** (Ad metadata blocking)
+4. **Network-level proxy filtering** (Traditional ad blocking)
+
+### Phase 2: Active Blocking Layers  
+5. **Real-time Stream Analysis** (Video content inspection)
+6. **Player Event Interception** (Ad break prevention)
+7. **Client-side request filtering** (Service workers & fetch)
+8. **DOM manipulation & CSS blocking** (Visual fallback)
+
+### Phase 3: Advanced Techniques
+9. **Alternative Stream Sources** (Multi-quality proxy routing)
+10. **Buffer Manipulation** (Skip ad segments in buffer)
+11. **Player State Override** (Force play during ad breaks)
 
 ## Implementation Steps
 
@@ -271,7 +283,244 @@ async function handleGeneralProxy(targetUrl: string): Promise<Response> {
 }
 ```
 
-### Step 3: Advanced Service Worker Ad Blocker
+### Step 3: Advanced Embedded Ad Blocking Implementation
+
+#### 3.1: Enhanced HLS Manifest Processing
+
+**Objective**: Eliminate embedded ads at the stream level by intelligently filtering HLS manifests and creating ad-free streams.
+
+**Approach**:
+```javascript
+// Enhanced M3U8 processing in /api/dev-proxy
+async function processHLSManifest(manifestContent: string, streamUrl: string) {
+  const lines = manifestContent.split('\n');
+  const filteredLines: string[] = [];
+  let skipNextSegment = false;
+  let adBreakDetected = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Enhanced SCTE-35 detection
+    if (line.includes('#EXT-X-SCTE35') || 
+        line.includes('#EXT-X-DATERANGE') ||
+        line.includes('#EXT-X-CUE-OUT') ||
+        line.includes('SCTE35-OUT') ||
+        line.includes('ad-id=') ||
+        line.includes('commercial')) {
+      
+      adBreakDetected = true;
+      skipNextSegment = true;
+      console.log('🚫 Ad marker detected, skipping segment');
+      continue;
+    }
+    
+    // Skip segments during ad breaks
+    if (skipNextSegment && line.startsWith('http')) {
+      console.log('🚫 Skipped ad segment:', line.substring(0, 50));
+      skipNextSegment = false;
+      continue;
+    }
+    
+    // Reset ad break detection after CUE-IN
+    if (line.includes('#EXT-X-CUE-IN')) {
+      adBreakDetected = false;
+      continue;
+    }
+    
+    // Segment duration analysis for ad detection
+    if (line.startsWith('#EXTINF:')) {
+      const duration = parseFloat(line.match(/EXTINF:([\d.]+)/)?.[1] || '0');
+      
+      // Ad segments often have specific durations (15s, 30s, etc.)
+      if ([15, 30, 60].some(adDur => Math.abs(duration - adDur) < 0.5)) {
+        // Potential ad segment, verify with next segment
+        const nextLine = lines[i + 1];
+        if (nextLine?.includes('ad') || nextLine?.includes('commercial')) {
+          console.log('🚫 Duration-based ad segment detected');
+          skipNextSegment = true;
+          continue;
+        }
+      }
+    }
+    
+    filteredLines.push(line);
+  }
+  
+  return filteredLines.join('\n');
+}
+```
+
+#### 3.2: Alternative Stream Source System
+
+**Objective**: Acquire ad-free streams by bypassing Twitch's ad-insertion pipeline.
+
+**Implementation**:
+```javascript
+// Multi-source stream acquisition
+async function getAlternativeStream(channel: string, quality: string = 'source') {
+  const streamSources = [
+    // Direct usher API (often ad-free)
+    `https://usher.ttvnw.net/api/channel/hls/${channel}.m3u8?token={token}&sig={sig}&allow_source=true&allow_audio_only=true`,
+    
+    // Alternative quality variants
+    `https://usher.ttvnw.net/api/channel/hls/${channel}.m3u8?p=${Math.floor(Math.random()*999999)}&player=twitchweb&segment_preference=4&allow_source=true&allow_audio_only=true`,
+    
+    // Backup mobile API (sometimes bypasses ads)
+    `https://usher.ttvnw.net/api/channel/hls/${channel}.m3u8?player=mobile&token={token}`,
+  ];
+  
+  for (const sourceUrl of streamSources) {
+    try {
+      const response = await fetch(sourceUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Client-ID': process.env.TWITCH_CLIENT_ID,
+          'Authorization': `Bearer ${await getTwitchToken()}`
+        }
+      });
+      
+      if (response.ok) {
+        const manifest = await response.text();
+        
+        // Verify this is an ad-free stream
+        if (!manifest.includes('SCTE35') && !manifest.includes('ad-id')) {
+          console.log('✅ Found ad-free stream source');
+          return await processHLSManifest(manifest, sourceUrl);
+        }
+      }
+    } catch (error) {
+      console.log('Source failed, trying next:', error.message);
+    }
+  }
+  
+  throw new Error('No ad-free stream sources available');
+}
+```
+
+#### 3.3: Player-Level Ad Break Elimination
+
+**Objective**: Override player behavior to skip/hide ad breaks even when they're embedded in the stream.
+
+**Player Enhancement**:
+```javascript
+// Advanced player override in DevWatchPlayer.tsx
+class AdFreePlayerWrapper {
+  private player: any;
+  private adBreakDetector: AdBreakDetector;
+  
+  constructor(player: any) {
+    this.player = player;
+    this.adBreakDetector = new AdBreakDetector();
+    this.setupAdvancedBlocking();
+  }
+  
+  private setupAdvancedBlocking() {
+    // Override player events
+    this.player.addEventListener('pause', (event: any) => {
+      if (this.adBreakDetector.isAdBreak()) {
+        console.log('🚫 Preventing ad break pause');
+        event.preventDefault();
+        this.player.play(); // Force continue playing
+        return false;
+      }
+    });
+    
+    // Monitor video element directly
+    const video = this.player.getVideoElement();
+    if (video) {
+      this.setupVideoElementOverrides(video);
+    }
+    
+    // Buffer manipulation
+    this.setupBufferSkipping();
+  }
+  
+  private setupVideoElementOverrides(video: HTMLVideoElement) {
+    // Override video pause during ads
+    const originalPause = video.pause.bind(video);
+    video.pause = () => {
+      if (this.adBreakDetector.isAdBreak()) {
+        console.log('🚫 Video pause blocked during ad');
+        return Promise.resolve();
+      }
+      return originalPause();
+    };
+    
+    // Monitor currentTime for ad segment skipping
+    Object.defineProperty(video, 'currentTime', {
+      get: () => video._currentTime || 0,
+      set: (time: number) => {
+        if (this.adBreakDetector.isAdSegment(time)) {
+          console.log('🚫 Skipping ad segment');
+          video._currentTime = this.adBreakDetector.getNextContentTime(time);
+        } else {
+          video._currentTime = time;
+        }
+      }
+    });
+  }
+  
+  private setupBufferSkipping() {
+    // Advanced buffer manipulation
+    setInterval(() => {
+      const video = this.player.getVideoElement();
+      if (!video) return;
+      
+      const currentTime = video.currentTime;
+      const buffered = video.buffered;
+      
+      for (let i = 0; i < buffered.length; i++) {
+        const start = buffered.start(i);
+        const end = buffered.end(i);
+        
+        if (this.adBreakDetector.isAdSegmentInBuffer(start, end)) {
+          console.log('🚫 Ad content detected in buffer, skipping');
+          
+          // Jump past ad segment
+          const nextContentTime = this.adBreakDetector.getNextContentTime(end);
+          if (nextContentTime > currentTime) {
+            video.currentTime = nextContentTime;
+          }
+        }
+      }
+    }, 1000);
+  }
+}
+
+class AdBreakDetector {
+  private adPatterns = [
+    /advertisement/i,
+    /commercial/i,
+    /sponsor/i,
+    /ad-break/i
+  ];
+  
+  isAdBreak(): boolean {
+    // Analyze DOM for ad indicators
+    const adElements = document.querySelectorAll('[data-test-selector*="ad"], [class*="ad-"], [id*="ad-"]');
+    return adElements.length > 0;
+  }
+  
+  isAdSegment(time: number): boolean {
+    // Time-based ad detection logic
+    // This would be enhanced with real-time stream analysis
+    return false; // Placeholder
+  }
+  
+  isAdSegmentInBuffer(start: number, end: number): boolean {
+    // Analyze buffer content for ad signatures
+    return false; // Placeholder
+  }
+  
+  getNextContentTime(currentTime: number): number {
+    // Calculate next non-ad content time
+    return currentTime + 30; // Skip typical ad duration
+  }
+}
+```
+
+#### 3.4: Advanced Service Worker Ad Blocker
 Create `public/sw-adblock-dev.js`:
 
 ```javascript

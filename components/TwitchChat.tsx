@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connectChat } from "@/lib/twitch/chat";
 import { Tooltip } from "./Tooltip";
-import { ChatAuth } from "./ChatAuth";
 
 type Badge = {
   setID: string;
@@ -51,22 +50,33 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isLive, setIsLive] = useState<boolean | null>(null);
-  const [authUsername, setAuthUsername] = useState<string | undefined>();
-  const [authOauth, setAuthOauth] = useState<string | undefined>();
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const envUsername = process.env.NEXT_PUBLIC_TWITCH_CHAT_USERNAME || process.env.TWITCH_CHAT_USERNAME;
-  const envOauth = process.env.NEXT_PUBLIC_TWITCH_CHAT_OAUTH || process.env.TWITCH_CHAT_OAUTH;
-  
-  // Use authenticated credentials or fallback to env vars
-  const username = authUsername || envUsername;
-  const oauth = authOauth || envOauth;
+  // Get credentials from localStorage (set by UserProfile after OAuth)
+  const [username, setUsername] = useState<string | undefined>();
+  const [oauth, setOauth] = useState<string | undefined>();
   const canSend = !!username && !!oauth;
 
-  const handleAuthChange = useCallback((newUsername?: string, newOauth?: string) => {
-    setAuthUsername(newUsername);
-    setAuthOauth(newOauth);
+  useEffect(() => {
+    // Check for stored credentials
+    const storedUsername = localStorage.getItem('twitch_username');
+    const storedOauth = localStorage.getItem('twitch_oauth');
+    
+    setUsername(storedUsername || undefined);
+    setOauth(storedOauth || undefined);
+    
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'twitch_username') {
+        setUsername(e.newValue || undefined);
+      } else if (e.key === 'twitch_oauth') {
+        setOauth(e.newValue || undefined);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Enhanced user color - make colors more vibrant
@@ -585,10 +595,17 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     };
   }, [channel, username, oauth]);
 
+  // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     const el = listRef.current;
     if (el && isAutoScrolling) {
-      el.scrollTop = el.scrollHeight;
+      // Use smooth scrolling with a small delay to ensure content is rendered
+      setTimeout(() => {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 10);
     }
   }, [messages, isAutoScrolling]);
 
@@ -601,7 +618,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = el;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 30;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50; // Increased threshold
       
       // Clear previous timeout
       clearTimeout(scrollTimeout);
@@ -616,7 +633,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         scrollTimeout = setTimeout(() => {
           setIsAutoScrolling(true);
           setShowScrollButton(false);
-        }, 500); // Brief delay to prevent flickering
+        }, 200); // Reduced delay for better responsiveness
       }
     };
 
@@ -630,7 +647,10 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const scrollToBottom = () => {
     const el = listRef.current;
     if (el) {
-      el.scrollTop = el.scrollHeight;
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: 'smooth'
+      });
       setIsAutoScrolling(true);
       setShowScrollButton(false);
     }
@@ -754,12 +774,9 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     <div className="flex h-full flex-col bg-surface overflow-hidden rounded-xl">
       {/* Header */}
       <div className="bg-surface border-b border-white/10 p-3 rounded-t-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`h-2 w-2 rounded-full ${isLive === true ? 'bg-red-500 animate-pulse' : isLive === false ? 'bg-gray-500' : 'bg-gray-500 animate-pulse'}`}></div>
-            <span className="text-sm font-bold text-white tracking-wide">live chat</span>
-          </div>
-          <ChatAuth onAuthChange={handleAuthChange} />
+        <div className="flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${isLive === true ? 'bg-red-500 animate-pulse' : isLive === false ? 'bg-gray-500' : 'bg-gray-500 animate-pulse'}`}></div>
+          <span className="text-sm font-bold text-white tracking-wide">live chat</span>
         </div>
       </div>
 

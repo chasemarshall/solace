@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { UserProfile } from "./UserProfile";
 
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,6 +30,7 @@ export default function Header() {
             className="w-72 rounded-xl bg-bg px-3 py-2 text-sm outline-none ring-purple-500/30 focus:ring-2 border border-white/10"
           />
         </form>
+        <UserProfile />
       </div>
     </header>
   );

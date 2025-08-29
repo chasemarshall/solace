@@ -25,8 +25,8 @@ export default function WatchPageClient({
   const [isChatVisible, setIsChatVisible] = useState(true);
 
   return (
-    <div className={`grid gap-6 ${isChatVisible ? 'xl:grid-cols-4 lg:grid-cols-3' : 'xl:grid-cols-3 lg:grid-cols-2'}`}>
-      <div className={`${isChatVisible ? 'xl:col-span-3 lg:col-span-2' : 'xl:col-span-2 lg:col-span-1'} space-y-4`}>
+    <div className={`${isChatVisible ? 'grid grid-cols-1 xl:grid-cols-4 lg:grid-cols-3 gap-6' : 'w-full'}`}>
+      <div className={`${isChatVisible ? 'xl:col-span-3 lg:col-span-2' : 'w-full'} space-y-4`}>
         <ErrorBoundary>
           <WatchPlayer channel={channel} parent={parent} />
         </ErrorBoundary>
@@ -65,7 +65,7 @@ export default function WatchPageClient({
       </div>
       
       {isChatVisible && (
-        <aside className="xl:col-span-1 lg:col-span-1">
+        <aside className="xl:col-span-1 lg:col-span-1 col-span-1">
           <div className="rounded-xl border border-white/5 bg-surface h-[75vh]">
             <ErrorBoundary>
               <TwitchChat channel={channel} playerMode="enhanced" />

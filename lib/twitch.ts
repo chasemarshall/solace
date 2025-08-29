@@ -11,8 +11,19 @@ async function getAppToken(): Promise<string> {
   const clientSecret = process.env.TWITCH_CLIENT_SECRET;
   
   if (!clientId || !clientSecret) {
+    console.error('Twitch credentials check:', { 
+      hasClientId: !!clientId, 
+      hasClientSecret: !!clientSecret,
+      clientIdLength: clientId?.length || 0,
+      clientSecretLength: clientSecret?.length || 0
+    });
     throw new Error("Missing TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET environment variables");
   }
+  
+  console.log('Attempting to get Twitch app token with credentials:', {
+    clientId: clientId.substring(0, 5) + '...',
+    clientIdLength: clientId.length
+  });
   
   const body = new URLSearchParams({
     client_id: clientId,

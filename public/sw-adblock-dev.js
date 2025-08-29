@@ -46,6 +46,16 @@ const GQL_AD_OPERATIONS = [
 let blockedCount = 0;
 let hlsInterceptCount = 0;
 
+function shouldInterceptTwitchRequest(url) {
+  // Only intercept specific Twitch API calls, not static assets
+  return url.includes('/api/') || 
+         url.includes('/helix/') ||
+         url.includes('/kraken/') ||
+         url.includes('/v5/') ||
+         url.includes('usher.ttvnw.net') ||
+         url.includes('gql.twitch.tv');
+}
+
 self.addEventListener('install', event => {
   console.log('🛡️ Dev Ad Blocker Service Worker installed');
   self.skipWaiting();
@@ -83,14 +93,13 @@ self.addEventListener('fetch', event => {
     return;
   }
   
-  // Allow other requests with proxy routing for Twitch requests
-  if (url.includes('twitch.tv') || url.includes('ttvnw.net')) {
+  // Allow other requests with proxy routing for specific Twitch requests only
+  if ((url.includes('twitch.tv') || url.includes('ttvnw.net')) && shouldInterceptTwitchRequest(url)) {
     event.respondWith(handleTwitchRequest(event.request));
     return;
   }
   
-  // Default fetch for non-Twitch requests
-  event.respondWith(fetch(event.request));
+  // Let browser handle all other requests normally (no interception)
 });
 
 async function handleHLSRequest(request) {
