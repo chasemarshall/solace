@@ -24,8 +24,8 @@ export default function WatchPageClient({
   const [isChatVisible, setIsChatVisible] = useState(true);
 
   return (
-    <div className={`grid gap-6 ${isChatVisible ? 'xl:grid-cols-4 lg:grid-cols-3' : 'grid-cols-1'}`}>
-      <div className={`${isChatVisible ? 'xl:col-span-3 lg:col-span-2' : 'col-span-1'} space-y-4`}>
+    <div className={`grid gap-6 ${isChatVisible ? 'xl:grid-cols-4 lg:grid-cols-3' : 'xl:grid-cols-3 lg:grid-cols-2'}`}>
+      <div className={`${isChatVisible ? 'xl:col-span-3 lg:col-span-2' : 'xl:col-span-2 lg:col-span-1'} space-y-4`}>
         <ErrorBoundary>
           <WatchPlayer channel={channel} parent={parent} />
         </ErrorBoundary>
