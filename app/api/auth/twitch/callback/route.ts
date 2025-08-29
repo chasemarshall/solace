@@ -15,7 +15,12 @@ export async function GET(request: NextRequest) {
 
   const clientId = process.env.TWITCH_CLIENT_ID;
   const clientSecret = process.env.TWITCH_CLIENT_SECRET;
-  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/auth/twitch/callback`;
+  // Dynamically determine the site URL from the request
+  const protocol = request.headers.get('x-forwarded-proto') || 'https';
+  const host = request.headers.get('host') || request.headers.get('x-forwarded-host');
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `${protocol}://${host}`;
+  
+  const redirectUri = `${siteUrl}/api/auth/twitch/callback`;
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(new URL('/?auth_error=config_error', request.url));
