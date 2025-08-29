@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connectChat } from "@/lib/twitch/chat";
 import { Tooltip } from "./Tooltip";
+import { ChatAuth } from "./ChatAuth";
 
 type Badge = {
   setID: string;
@@ -53,9 +54,18 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const username = process.env.NEXT_PUBLIC_TWITCH_CHAT_USERNAME || process.env.TWITCH_CHAT_USERNAME;
-  const oauth = process.env.NEXT_PUBLIC_TWITCH_CHAT_OAUTH || process.env.TWITCH_CHAT_OAUTH;
+  const envUsername = process.env.NEXT_PUBLIC_TWITCH_CHAT_USERNAME || process.env.TWITCH_CHAT_USERNAME;
+  const envOauth = process.env.NEXT_PUBLIC_TWITCH_CHAT_OAUTH || process.env.TWITCH_CHAT_OAUTH;
+  
+  // Use authenticated credentials or fallback to env vars
+  const username = authUsername || envUsername;
+  const oauth = authOauth || envOauth;
   const canSend = !!username && !!oauth;
+
+  const handleAuthChange = useCallback((newUsername?: string, newOauth?: string) => {
+    setAuthUsername(newUsername);
+    setAuthOauth(newOauth);
+  }, []);
 
   // Enhanced user color - make colors more vibrant
   const enhanceUserColor = (color?: string) => {
