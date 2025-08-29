@@ -50,6 +50,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isLive, setIsLive] = useState<boolean | null>(null);
+  const [userIsScrolling, setUserIsScrolling] = useState(false);
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -598,16 +599,18 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     const el = listRef.current;
-    if (el && isAutoScrolling) {
-      // Use smooth scrolling with a small delay to ensure content is rendered
-      setTimeout(() => {
-        el.scrollTo({
-          top: el.scrollHeight,
-          behavior: 'smooth'
-        });
-      }, 10);
+    if (el && isAutoScrolling && !userIsScrolling) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        if (el && isAutoScrolling && !userIsScrolling) { // Check again in case state changed
+          el.scrollTo({
+            top: el.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      });
     }
-  }, [messages, isAutoScrolling]);
+  }, [messages, isAutoScrolling, userIsScrolling]);
 
   // Handle scroll detection
   useEffect(() => {
@@ -615,25 +618,46 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     if (!el) return;
 
     let scrollTimeout: NodeJS.Timeout;
+    let userScrollTimeout: NodeJS.Timeout;
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = el;
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50; // Increased threshold
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const isAtBottom = distanceFromBottom < 5; // Very small threshold for "at bottom"
+      const isNearBottom = distanceFromBottom < 100; // Larger threshold for "near bottom"
       
-      // Clear previous timeout
+      // Mark user as actively scrolling
+      setUserIsScrolling(true);
+      
+      // Clear previous timeouts
       clearTimeout(scrollTimeout);
+      clearTimeout(userScrollTimeout);
+      
+      // Stop marking user as scrolling after they stop
+      userScrollTimeout = setTimeout(() => {
+        setUserIsScrolling(false);
+      }, 150);
       
       // If user scrolled up from bottom, pause auto-scrolling immediately
       if (!isNearBottom && isAutoScrolling) {
         setIsAutoScrolling(false);
         setShowScrollButton(true);
       } 
-      // If user scrolled back near bottom, resume auto-scrolling after a brief delay
-      else if (isNearBottom && !isAutoScrolling) {
+      // If user is at the very bottom, enable auto-scrolling immediately
+      else if (isAtBottom && !isAutoScrolling) {
+        setIsAutoScrolling(true);
+        setShowScrollButton(false);
+      }
+      // If user scrolled back near bottom (but not at bottom), resume auto-scrolling after delay
+      else if (isNearBottom && !isAtBottom && !isAutoScrolling) {
         scrollTimeout = setTimeout(() => {
-          setIsAutoScrolling(true);
-          setShowScrollButton(false);
-        }, 200); // Reduced delay for better responsiveness
+          // Check again if still near bottom before enabling
+          const currentDistance = el.scrollHeight - el.scrollTop - el.clientHeight;
+          if (currentDistance < 100) {
+            setIsAutoScrolling(true);
+            setShowScrollButton(false);
+          }
+        }, 500);
       }
     };
 
@@ -641,6 +665,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     return () => {
       el.removeEventListener('scroll', handleScroll);
       clearTimeout(scrollTimeout);
+      clearTimeout(userScrollTimeout);
     };
   }, [isAutoScrolling]);
 
