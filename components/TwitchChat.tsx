@@ -231,7 +231,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const fetchBttvEmotes = useCallback(async (channelName: string, roomId?: string) => {
     try {
       // Always fetch global emotes with timeout
-      console.log("📡 Fetching BTTV global emotes...");
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       let globalRes: Response;
@@ -288,17 +287,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             });
           }
         } catch (e) {
-          console.log("No BTTV channel emotes found for", channelName);
+          // No BTTV channel emotes found
         }
       }
       
       setBttvEmotes(allBttvEmotes);
-      console.log(`✅ Loaded ${Object.keys(allBttvEmotes).length} BTTV emotes for ${channelName}`);
-      if (Object.keys(allBttvEmotes).length > 0) {
-        console.log("🎭 BTTV emotes:", Object.keys(allBttvEmotes).slice(0, 5).join(', '), '...');
-      }
     } catch (e) {
-      console.error("❌ Failed to fetch BTTV emotes:", e);
+      // Failed to fetch BTTV emotes
       setBttvEmotes({});
     }
   }, []);
@@ -307,7 +302,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const fetchFfzEmotes = useCallback(async (channelName: string) => {
     try {
       // Always fetch global emotes with timeout
-      console.log("📡 Fetching FFZ global emotes...");
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       let globalRes: Response;
@@ -367,22 +361,14 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
               });
             });
           }
-        } else if (channelRes.status === 404) {
-          console.log(`FFZ: No channel emotes found for ${channelName}`);
-        } else {
-          console.warn(`FFZ channel emotes failed with status ${channelRes.status} for ${channelName}`);
         }
       } catch (e) {
-        console.log("FFZ channel emotes request failed for", channelName, e);
+        // FFZ channel emotes request failed
       }
       
       setFfzEmotes(allFfzEmotes);
-      console.log(`✅ Loaded ${Object.keys(allFfzEmotes).length} FFZ emotes for ${channelName}`);
-      if (Object.keys(allFfzEmotes).length > 0) {
-        console.log("🐸 FFZ emotes:", Object.keys(allFfzEmotes).slice(0, 5).join(', '), '...');
-      }
     } catch (e) {
-      console.error("❌ Failed to fetch FFZ emotes:", e);
+      // Failed to fetch FFZ emotes
       setFfzEmotes({});
     }
   }, []);
@@ -391,7 +377,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const fetchSeventvEmotes = useCallback(async (channelName: string, roomId?: string) => {
     try {
       // Always fetch global emotes with timeout
-      console.log("📡 Fetching 7TV global emotes...");
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       let globalRes: Response;
@@ -450,17 +435,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             }
           }
         } catch (e) {
-          console.log("No 7TV channel emotes found for", channelName);
+          // No 7TV channel emotes found
         }
       }
       
       setSeventvEmotes(allSeventvEmotes);
-      console.log(`✅ Loaded ${Object.keys(allSeventvEmotes).length} 7TV emotes for ${channelName}`);
-      if (Object.keys(allSeventvEmotes).length > 0) {
-        console.log("📺 7TV emotes:", Object.keys(allSeventvEmotes).slice(0, 5).join(', '), '...');
-      }
     } catch (e) {
-      console.error("❌ Failed to fetch 7TV emotes:", e);
+      // Failed to fetch 7TV emotes
       setSeventvEmotes({});
     }
   }, []);
@@ -468,13 +449,11 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   // Get channel ID and load emotes (only in enhanced mode)
   useEffect(() => {
     if (playerMode !== "enhanced") {
-      console.log("Basic mode: Skipping BTTV/FFZ emote loading");
       return;
     }
 
     const fetchChannelData = async () => {
       try {
-        console.log(`📡 Fetching channel data for: ${channel}`);
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
         let res: Response;
@@ -492,8 +471,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           const userId = data.user?.id;
           setChannelId(userId || "");
           setIsLive(data.liveStream !== null);
-          console.log(`✅ Channel ID for ${channel}: ${userId || 'not found'}`);
-          console.log(`📺 Live status for ${channel}: ${data.liveStream ? 'LIVE' : 'OFFLINE'}`);
           
           // Load emotes with proper IDs
           await Promise.all([
@@ -502,14 +479,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             fetchSeventvEmotes(channel, userId)
           ]);
         } else {
-          console.warn(`⚠️ Channel API returned ${res.status}, loading global emotes only`);
+          // Channel API returned error status
           throw new Error(`Channel API returned ${res.status}`);
         }
       } catch (e) {
-        console.error("❌ Failed to fetch channel data:", e);
+        // Failed to fetch channel data
         setIsLive(false);
         // Fallback: load global emotes only
-        console.log("🔄 Falling back to global emotes only");
         await Promise.all([
           fetchBttvEmotes(channel),
           fetchFfzEmotes(channel),
@@ -527,7 +503,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       try {
         clientRef.current.disconnect();
       } catch (e) {
-        console.warn('Error disconnecting previous client:', e);
+        // Error disconnecting previous client
       }
       clientRef.current = null;
     }
@@ -572,9 +548,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         const existingMessage = prevMessages.find(m => m.id === messageId);
         if (existingMessage) {
           // Only log occasionally to avoid spam
-          if (Math.random() < 0.1) {
-            console.log('🚫 Duplicate messages prevented (this log shown 10% of time)');
-          }
           return prevMessages;
         }
         
@@ -831,7 +804,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             content: word.replace(/__TWITCH_\d+__/, `twitch_emote_${emoteId}`),
             emoteUrl
           });
-          // Reduced logging for emotes
         }
       } else if (bttvEmotes[word]) {
         const emoteUrl = bttvEmotes[word].urls["1"];
@@ -990,11 +962,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                                   alt={part.content}
                                   className="inline-block h-6 w-6 align-middle mx-0.5 cursor-help"
                                   onError={(e) => {
-                                    console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
                                     (e.target as HTMLImageElement).style.display = 'none';
-                                  }}
-                                  onLoad={() => {
-                                    console.log(`✅ Loaded emote: ${part.content}`);
                                   }}
                                 />
                               </Tooltip>
@@ -1028,11 +996,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                                 alt={part.content}
                                 className="inline-block h-6 w-6 align-middle mx-0.5 cursor-help"
                                 onError={(e) => {
-                                  console.warn(`❌ Failed to load emote: ${part.content} (${part.emoteUrl})`);
                                   (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                                onLoad={() => {
-                                  console.log(`✅ Loaded emote: ${part.content}`);
                                 }}
                               />
                             </Tooltip>

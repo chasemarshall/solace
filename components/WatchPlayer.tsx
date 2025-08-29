@@ -1,24 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
 export default function WatchPlayer({ channel, parent }: { channel: string; parent: string }) {
-  const [authToken, setAuthToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Check for stored auth token
-    const storedAuth = localStorage.getItem('twitch_auth');
-    if (storedAuth) {
-      try {
-        const parsedAuth = JSON.parse(storedAuth);
-        if (parsedAuth.expires_at && Date.now() < parsedAuth.expires_at) {
-          setAuthToken(parsedAuth.tokens.access_token);
-        }
-      } catch (e) {
-        console.error('Failed to parse stored auth:', e);
-      }
-    }
-  }, []);
 
   // Get iframe source with proper parent domain
   const getIframeSrc = useCallback(() => {
@@ -26,15 +10,9 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
     const parentDomain = parent || 'localhost';
     
     // Enhanced iframe URL with Twitch player features
-    let baseUrl = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true`;
-    
-    // Add auth token if available
-    if (authToken) {
-      baseUrl += `&token=${encodeURIComponent(authToken)}`;
-    }
-    
-    return baseUrl;
-  }, [channel, parent, authToken]);
+    // Note: Auth is handled by browser cookies/session, not URL token params
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true`;
+  }, [channel, parent]);
 
   const iframeSrc = getIframeSrc();
 
@@ -51,8 +29,6 @@ export default function WatchPlayer({ channel, parent }: { channel: string; pare
           referrerPolicy="strict-origin-when-cross-origin"
           scrolling="no"
           frameBorder="0"
-          onLoad={() => console.log("Twitch player loaded successfully")}
-          onError={(e) => console.error("Twitch player failed to load:", e)}
         />
       </div>
     </div>

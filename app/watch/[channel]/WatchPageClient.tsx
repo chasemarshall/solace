@@ -56,7 +56,7 @@ export default function WatchPageClient({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsChatVisible(!isChatVisible)}
-              className="w-8 h-8 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
+              className="px-3 py-2 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
               title={isChatVisible ? "hide chat" : "show chat"}
             >
               {isChatVisible ? (
@@ -67,7 +67,7 @@ export default function WatchPageClient({
             </button>
             <button
               onClick={() => setIsImmersiveMode(true)}
-              className="w-8 h-8 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
+              className="px-3 py-2 rounded-md bg-surface border border-white/10 text-text hover:bg-white/5 transition-all duration-200 flex items-center justify-center"
               title="immersive mode"
             >
               <Maximize className="h-4 w-4" />

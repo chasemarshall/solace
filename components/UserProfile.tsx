@@ -46,12 +46,11 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
           window.history.replaceState({}, document.title, window.location.pathname);
           setLoading(false);
         } catch (e) {
-          console.error('Failed to parse auth data:', e);
           setLoading(false);
         }
       } else if (hash.includes('auth_error=')) {
         const error = hash.split('auth_error=')[1];
-        console.error('Authentication error:', decodeURIComponent(error));
+        // Authentication error
         setLoading(false);
       }
     };
@@ -89,7 +88,7 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
             setAuthData(parsedAuth);
             onAuthChange?.(true, parsedAuth);
           } catch (err) {
-            console.error('Failed to parse stored auth:', err);
+            // Failed to parse stored auth
           }
         } else {
           setAuthData(null);
@@ -114,18 +113,19 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
     return (
       <button
         onClick={handleProfileClick}
-        className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-purple-500/50 transition-all duration-200"
+        className="px-3 py-2 rounded-lg bg-purple-600 flex items-center justify-center gap-2 hover:ring-2 hover:ring-purple-500/50 transition-all duration-200"
         title={`${user.display_name} - Click to logout`}
       >
         {user.profile_image_url ? (
           <img
             src={user.profile_image_url}
             alt={user.display_name}
-            className="w-8 h-8 object-cover"
+            className="w-5 h-5 rounded-full object-cover"
           />
         ) : (
           <User className="w-4 h-4 text-white" />
         )}
+        <span className="text-sm font-medium text-white">{user.display_name}</span>
       </button>
     );
   }
@@ -134,7 +134,7 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
     <button
       onClick={handleLogin}
       disabled={loading}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-surface hover:bg-white/5 transition-colors disabled:opacity-50"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-surface hover:bg-white/5 transition-colors disabled:opacity-50"
     >
       <User className="w-4 h-4" />
       <span className="text-sm">{loading ? "connecting..." : "sign in"}</span>
