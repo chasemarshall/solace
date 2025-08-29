@@ -51,6 +51,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [isAutoScrolling, setIsAutoScrolling] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isLive, setIsLive] = useState<boolean | null>(null);
+  const [authUsername, setAuthUsername] = useState<string | undefined>();
+  const [authOauth, setAuthOauth] = useState<string | undefined>();
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
