@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserProfile } from "@/components/layout/UserProfile";
+import { useImmersive } from "@/contexts/ImmersiveContext";
 
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const { isImmersiveMode } = useImmersive();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +22,7 @@ export default function Header() {
     <header className="border-b border-white/5 bg-surface/60 backdrop-blur mb-8">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
         <Link href="/" className="font-semibold tracking-tight text-xl">
-          solace.
+          {isImmersiveMode ? "Twitch" : "solace."}
         </Link>
         <form onSubmit={handleSearch} className="hidden sm:block">
           <input
