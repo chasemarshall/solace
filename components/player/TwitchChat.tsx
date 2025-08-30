@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connectChat } from "@/lib/twitch/chat";
 import { Tooltip } from "@/components/ui/Tooltip";
+import DOMPurify from "dompurify";
 
 type Badge = {
   setID: string;
@@ -37,6 +38,33 @@ type Msg = {
     message: string;
   };
   isMention: boolean;
+};
+
+// SECURITY: Sanitize all user-generated content to prevent XSS
+const sanitizeContent = (content: string): string => {
+  if (typeof window === 'undefined') return content; // SSR safety
+  return DOMPurify.sanitize(content, { 
+    ALLOWED_TAGS: [], // No HTML tags allowed
+    ALLOWED_ATTR: [],
+    FORBID_TAGS: ['script', 'object', 'embed', 'link', 'style'],
+    USE_PROFILES: { html: false }
+  });
+};
+
+// SECURITY: Validate emote URLs to prevent malicious content
+const isValidEmoteUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    const allowedDomains = [
+      'static-cdn.jtvnw.net',
+      'cdn.betterttv.net', 
+      'cdn.frankerfacez.com',
+      'cdn.7tv.app'
+    ];
+    return allowedDomains.some(domain => parsed.hostname.endsWith(domain));
+  } catch {
+    return false;
+  }
 };
 
 export default function TwitchChat({ channel, playerMode = "basic" }: { channel: string; playerMode?: "basic" | "enhanced" }) {
@@ -663,7 +691,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
   // Parse message with emotes
   const parseMessage = useCallback((message: Msg) => {
-    let text = message.text;
+    // SECURITY: Sanitize message text to prevent XSS
+    let text = sanitizeContent(message.text);
     
     // Handle Twitch emotes first
     const twitchEmoteRanges: Array<{ start: number; end: number; id: string }> = [];
@@ -711,32 +740,54 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
         }
       } else if (bttvEmotes[word]) {
         const emoteUrl = bttvEmotes[word].urls["1"];
-        parts.push({
-          type: 'emote',
-          content: word,
-          emoteUrl
-        });
+        // SECURITY: Validate emote URL before using
+        if (isValidEmoteUrl(emoteUrl)) {
+          parts.push({
+            type: 'emote',
+            content: sanitizeContent(word),
+            emoteUrl
+          });
+        } else {
+          parts.push({
+            type: 'text',
+            content: sanitizeContent(word)
+          });
+        }
         // Reduced logging for emotes
       } else if (ffzEmotes[word]) {
         const emoteUrl = ffzEmotes[word].urls["1"];
-        parts.push({
-          type: 'emote',
-          content: word,
-          emoteUrl
-        });
-        // Reduced logging for emotes
+        // SECURITY: Validate emote URL before using
+        if (isValidEmoteUrl(emoteUrl)) {
+          parts.push({
+            type: 'emote',
+            content: sanitizeContent(word),
+            emoteUrl
+          });
+        } else {
+          parts.push({
+            type: 'text',
+            content: sanitizeContent(word)
+          });
+        }
       } else if (seventvEmotes[word]) {
         const emoteUrl = seventvEmotes[word].urls["1"];
-        parts.push({
-          type: 'emote',
-          content: word,
-          emoteUrl
-        });
-        // Reduced logging for emotes
+        // SECURITY: Validate emote URL before using
+        if (isValidEmoteUrl(emoteUrl)) {
+          parts.push({
+            type: 'emote',
+            content: sanitizeContent(word),
+            emoteUrl
+          });
+        } else {
+          parts.push({
+            type: 'text',
+            content: sanitizeContent(word)
+          });
+        }
       } else {
         parts.push({
           type: 'text',
-          content: word
+          content: sanitizeContent(word)
         });
       }
       
@@ -814,10 +865,10 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                       </svg>
                       <span className="text-text-muted">replying to</span>
                       <span className="font-semibold text-white">
-                        {m.replyTo.displayName}
+                        {sanitizeContent(m.replyTo.displayName)}
                       </span>
                       <span className="truncate max-w-32 text-text-muted italic">
-                        &quot;{m.replyTo.message.length > 25 ? `${m.replyTo.message.substring(0, 25)}...` : m.replyTo.message}&quot;
+                        &quot;{m.replyTo.message.length > 25 ? `${sanitizeContent(m.replyTo.message.substring(0, 25))}...` : sanitizeContent(m.replyTo.message)}&quot;
                       </span>
                     </div>
                   )}
@@ -845,7 +896,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                           onClick={() => handleReply(m)}
                           title="Click to reply"
                         >
-                          {m.displayName}:
+                          {sanitizeContent(m.displayName)}:
                         </span>
                       </span>
                       
@@ -932,7 +983,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
               </svg>
               <span>Replying to</span>
               <span className="font-bold text-white">
-                {replyingTo.displayName}
+                {sanitizeContent(replyingTo.displayName)}
               </span>
             </div>
             <button
@@ -979,6 +1030,10 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
               }
             }}
             disabled={!canSend}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
             className="w-full rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder="type here."
             maxLength={500}
