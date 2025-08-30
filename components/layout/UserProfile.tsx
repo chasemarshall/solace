@@ -182,6 +182,16 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
             // Store basic user info for chat (tokens are server-side only now)
             localStorage.setItem('twitch_username', decodedAuthData.user.login);
             
+            // Fetch chat token from secure API endpoint
+            fetch('/api/auth/chat-token')
+              .then(res => res.json())
+              .then(data => {
+                if (data.oauth) {
+                  localStorage.setItem('twitch_oauth', data.oauth);
+                }
+              })
+              .catch(err => console.error('Failed to fetch chat token:', err));
+            
             // Clean up URL
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete('auth');
@@ -210,7 +220,16 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
           onAuthChange?.(true, parsedAuth);
           // Set chat credentials
           localStorage.setItem('twitch_username', parsedAuth.user.login);
-          localStorage.setItem('twitch_oauth', `oauth:${parsedAuth.tokens.access_token}`);
+          
+          // Fetch chat token from secure API endpoint
+          fetch('/api/auth/chat-token')
+            .then(res => res.json())
+            .then(data => {
+              if (data.oauth) {
+                localStorage.setItem('twitch_oauth', data.oauth);
+              }
+            })
+            .catch(err => console.error('Failed to fetch chat token:', err));
         } else {
           // Token expired, clear it
           localStorage.removeItem('twitch_auth');
