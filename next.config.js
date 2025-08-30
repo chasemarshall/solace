@@ -31,7 +31,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://embed.twitch.tv https://player.twitch.tv https://static.twitchcdn.net https://solace.heysonder.xyz https://*.twitch.tv",
               "frame-src 'self' https://player.twitch.tv https://embed.twitch.tv https://www.twitch.tv https://*.twitch.tv",
-              "connect-src 'self' https://api.twitch.tv https://gql.twitch.tv https://pubsub-edge.twitch.tv wss://pubsub-edge.twitch.tv https://irc-ws.chat.twitch.tv wss://irc-ws.chat.twitch.tv https://solace.heysonder.xyz https://*.twitch.tv https://api.betterttv.net https://api.frankerfacez.com https://7tv.io https://cdn.7tv.app",
+              "connect-src 'self' https://api.twitch.tv https://gql.twitch.tv https://id.twitch.tv https://static-cdn.jtvnw.net https://vitals.vercel-insights.com wss://irc-ws.chat.twitch.tv https://api.betterttv.net https://api.frankerfacez.com https://7tv.io https://cdn.7tv.app",
               "img-src 'self' data: https: blob: https://*.twitch.tv https://static-cdn.jtvnw.net https://cdn.betterttv.net https://cdn.frankerfacez.com https://cdn.7tv.app",
               "media-src 'self' https: blob: https://*.twitch.tv https://static-cdn.jtvnw.net",
               "style-src 'self' 'unsafe-inline' https: https://*.twitch.tv",

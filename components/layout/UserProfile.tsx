@@ -186,8 +186,10 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
             fetch('/api/auth/chat-token')
               .then(res => res.json())
               .then(data => {
+                console.log('Chat token response:', data);
                 if (data.oauth) {
                   localStorage.setItem('twitch_oauth', data.oauth);
+                  console.log('Chat token stored successfully');
                 }
               })
               .catch(err => console.error('Failed to fetch chat token:', err));
@@ -225,11 +227,13 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
           fetch('/api/auth/chat-token')
             .then(res => res.json())
             .then(data => {
+              console.log('Chat token response (stored auth):', data);
               if (data.oauth) {
                 localStorage.setItem('twitch_oauth', data.oauth);
+                console.log('Chat token stored successfully (stored auth)');
               }
             })
-            .catch(err => console.error('Failed to fetch chat token:', err));
+            .catch(err => console.error('Failed to fetch chat token (stored auth):', err));
         } else {
           // Token expired, clear it
           localStorage.removeItem('twitch_auth');
