@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings, LogOut, Sun, Moon } from "lucide-react";
 
 interface UserProfileProps {
   onAuthChange?: (isAuthenticated: boolean, authData?: any) => void;
@@ -11,6 +11,10 @@ interface UserProfileProps {
 function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showBadges, setShowBadges] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [bttvEnabled, setBttvEnabled] = useState(true);
+  const [ffzEnabled, setFfzEnabled] = useState(true);
+  const [seventvEnabled, setSeventvEnabled] = useState(true);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -21,9 +25,18 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   }, []);
 
   useEffect(() => {
-    // Load badge visibility preference
+    // Load preferences
     const savedShowBadges = localStorage.getItem('chat_show_badges');
+    const savedTheme = localStorage.getItem('theme');
+    const savedBttv = localStorage.getItem('emotes_bttv');
+    const savedFfz = localStorage.getItem('emotes_ffz');
+    const savedSeventv = localStorage.getItem('emotes_7tv');
+    
     setShowBadges(savedShowBadges !== 'false');
+    setIsDarkMode(savedTheme !== 'light');
+    setBttvEnabled(savedBttv !== 'false');
+    setFfzEnabled(savedFfz !== 'false');
+    setSeventvEnabled(savedSeventv !== 'false');
   }, []);
 
   useEffect(() => {
@@ -46,6 +59,54 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'chat_show_badges',
       newValue: newShowBadges.toString(),
+    }));
+  };
+
+  const toggleTheme = () => {
+    const newTheme = isDarkMode ? 'light' : 'dark';
+    setIsDarkMode(!isDarkMode);
+    localStorage.setItem('theme', newTheme);
+    
+    // Apply theme to document
+    if (newTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
+  };
+
+  const toggleBttv = () => {
+    const newEnabled = !bttvEnabled;
+    setBttvEnabled(newEnabled);
+    localStorage.setItem('emotes_bttv', newEnabled.toString());
+    
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'emotes_bttv',
+      newValue: newEnabled.toString(),
+    }));
+  };
+
+  const toggleFfz = () => {
+    const newEnabled = !ffzEnabled;
+    setFfzEnabled(newEnabled);
+    localStorage.setItem('emotes_ffz', newEnabled.toString());
+    
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'emotes_ffz',
+      newValue: newEnabled.toString(),
+    }));
+  };
+
+  const toggleSeventv = () => {
+    const newEnabled = !seventvEnabled;
+    setSeventvEnabled(newEnabled);
+    localStorage.setItem('emotes_7tv', newEnabled.toString());
+    
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'emotes_7tv',
+      newValue: newEnabled.toString(),
     }));
   };
 
@@ -94,7 +155,7 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
 
       {isOpen && dropdownPosition && mounted && createPortal(
         <div 
-          className="fixed w-48 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm"
+          className="fixed w-56 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm max-h-96 overflow-y-auto"
           style={{
             top: `${dropdownPosition.top}px`,
             right: `${dropdownPosition.right}px`,
@@ -110,13 +171,36 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
               <div className="text-xs text-text-muted">Twitch User</div>
             </div>
             
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center justify-between"
+            >
+              <span className="flex items-center gap-2">
+                {isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+              </span>
+              <div className={`w-4 h-4 rounded border ${isDarkMode ? 'bg-purple-600 border-purple-600' : 'border-white/30'} flex items-center justify-center`}>
+                {isDarkMode && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </button>
+
+            {/* Chat Settings */}
+            <div className="px-3 py-1 text-xs text-text-muted font-medium border-b border-white/5">
+              Chat Settings
+            </div>
+            
             <button
               onClick={toggleBadges}
               className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center justify-between"
             >
               <span className="flex items-center gap-2">
                 <Settings className="w-4 h-4" />
-                Show Chat Badges
+                Show Badges
               </span>
               <div className={`w-4 h-4 rounded border ${showBadges ? 'bg-purple-600 border-purple-600' : 'border-white/30'} flex items-center justify-center`}>
                 {showBadges && (
@@ -126,10 +210,66 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
                 )}
               </div>
             </button>
+
+            {/* Emote Settings */}
+            <div className="px-3 py-1 text-xs text-text-muted font-medium border-b border-white/5">
+              Emote Providers
+            </div>
+            
+            <button
+              onClick={toggleBttv}
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center justify-between"
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 bg-green-500 rounded text-xs font-bold flex items-center justify-center text-black">B</span>
+                BTTV Emotes
+              </span>
+              <div className={`w-4 h-4 rounded border ${bttvEnabled ? 'bg-purple-600 border-purple-600' : 'border-white/30'} flex items-center justify-center`}>
+                {bttvEnabled && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </button>
+            
+            <button
+              onClick={toggleFfz}
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center justify-between"
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 bg-blue-500 rounded text-xs font-bold flex items-center justify-center text-white">F</span>
+                FFZ Emotes
+              </span>
+              <div className={`w-4 h-4 rounded border ${ffzEnabled ? 'bg-purple-600 border-purple-600' : 'border-white/30'} flex items-center justify-center`}>
+                {ffzEnabled && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </button>
+            
+            <button
+              onClick={toggleSeventv}
+              className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center justify-between"
+            >
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 bg-purple-500 rounded text-xs font-bold flex items-center justify-center text-white">7</span>
+                7TV Emotes
+              </span>
+              <div className={`w-4 h-4 rounded border ${seventvEnabled ? 'bg-purple-600 border-purple-600' : 'border-white/30'} flex items-center justify-center`}>
+                {seventvEnabled && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </button>
             
             <button
               onClick={handleLogout}
-              className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 border-t border-white/10 mt-1"
             >
               <LogOut className="w-4 h-4" />
               Logout

@@ -78,6 +78,9 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [isLive, setIsLive] = useState<boolean | null>(null);
   const [scrollPaused, setScrollPaused] = useState(false);
   const [showBadges, setShowBadges] = useState(true);
+  const [bttvEnabled, setBttvEnabled] = useState(true);
+  const [ffzEnabled, setFfzEnabled] = useState(true);
+  const [seventvEnabled, setSeventvEnabled] = useState(true);
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -108,21 +111,34 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Badge visibility state management
+  // Badge visibility and emote preferences management
   useEffect(() => {
-    // Load badge visibility preference from localStorage
+    // Load preferences from localStorage
     const savedShowBadges = localStorage.getItem('chat_show_badges');
-    setShowBadges(savedShowBadges !== 'false'); // default to true
+    const savedBttv = localStorage.getItem('emotes_bttv');
+    const savedFfz = localStorage.getItem('emotes_ffz');
+    const savedSeventv = localStorage.getItem('emotes_7tv');
+    
+    setShowBadges(savedShowBadges !== 'false');
+    setBttvEnabled(savedBttv !== 'false');
+    setFfzEnabled(savedFfz !== 'false');
+    setSeventvEnabled(savedSeventv !== 'false');
 
     // Listen for storage changes
-    const handleBadgeStorageChange = (e: StorageEvent) => {
+    const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'chat_show_badges') {
         setShowBadges(e.newValue !== 'false');
+      } else if (e.key === 'emotes_bttv') {
+        setBttvEnabled(e.newValue !== 'false');
+      } else if (e.key === 'emotes_ffz') {
+        setFfzEnabled(e.newValue !== 'false');
+      } else if (e.key === 'emotes_7tv') {
+        setSeventvEnabled(e.newValue !== 'false');
       }
     };
 
-    window.addEventListener('storage', handleBadgeStorageChange);
-    return () => window.removeEventListener('storage', handleBadgeStorageChange);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Enhanced user color - make colors more vibrant
@@ -511,12 +527,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           setChannelId(userId || "");
           setIsLive(data.liveStream !== null);
           
-          // Load emotes with proper IDs
-          await Promise.all([
-            fetchBttvEmotes(channel, userId),
-            fetchFfzEmotes(channel),
-            fetchSeventvEmotes(channel, userId)
-          ]);
+          // Load emotes based on user preferences
+          const emotePromises = [];
+          if (bttvEnabled) emotePromises.push(fetchBttvEmotes(channel, userId));
+          if (ffzEnabled) emotePromises.push(fetchFfzEmotes(channel));
+          if (seventvEnabled) emotePromises.push(fetchSeventvEmotes(channel, userId));
+          
+          await Promise.all(emotePromises);
         } else {
           // Channel API returned error status
           throw new Error(`Channel API returned ${res.status}`);
@@ -524,17 +541,18 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       } catch (e) {
         // Failed to fetch channel data
         setIsLive(false);
-        // Fallback: load global emotes only
-        await Promise.all([
-          fetchBttvEmotes(channel),
-          fetchFfzEmotes(channel),
-          fetchSeventvEmotes(channel)
-        ]);
+        // Fallback: load global emotes based on user preferences
+        const fallbackEmotePromises = [];
+        if (bttvEnabled) fallbackEmotePromises.push(fetchBttvEmotes(channel));
+        if (ffzEnabled) fallbackEmotePromises.push(fetchFfzEmotes(channel));
+        if (seventvEnabled) fallbackEmotePromises.push(fetchSeventvEmotes(channel));
+        
+        await Promise.all(fallbackEmotePromises);
       }
     };
     
     fetchChannelData();
-  }, [channel, fetchBttvEmotes, fetchFfzEmotes, fetchSeventvEmotes, playerMode]);
+  }, [channel, fetchBttvEmotes, fetchFfzEmotes, fetchSeventvEmotes, playerMode, bttvEnabled, ffzEnabled, seventvEnabled]);
 
   useEffect(() => {
     // Clean up any existing client first
@@ -738,7 +756,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             emoteUrl
           });
         }
-      } else if (bttvEmotes[word]) {
+      } else if (bttvEnabled && bttvEmotes[word]) {
         const emoteUrl = bttvEmotes[word].urls["1"];
         // SECURITY: Validate emote URL before using
         if (isValidEmoteUrl(emoteUrl)) {
@@ -754,7 +772,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           });
         }
         // Reduced logging for emotes
-      } else if (ffzEmotes[word]) {
+      } else if (ffzEnabled && ffzEmotes[word]) {
         const emoteUrl = ffzEmotes[word].urls["1"];
         // SECURITY: Validate emote URL before using
         if (isValidEmoteUrl(emoteUrl)) {
@@ -769,7 +787,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             content: sanitizeContent(word)
           });
         }
-      } else if (seventvEmotes[word]) {
+      } else if (seventvEnabled && seventvEmotes[word]) {
         const emoteUrl = seventvEmotes[word].urls["1"];
         // SECURITY: Validate emote URL before using
         if (isValidEmoteUrl(emoteUrl)) {
@@ -798,7 +816,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     });
 
     return parts;
-  }, [bttvEmotes, ffzEmotes, seventvEmotes]);
+  }, [bttvEmotes, ffzEmotes, seventvEmotes, bttvEnabled, ffzEnabled, seventvEnabled]);
 
   const handleReply = (message: Msg) => {
     if (!canSend) return;
