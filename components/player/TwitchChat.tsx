@@ -604,7 +604,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = el;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const isAtBottom = distanceFromBottom < 10;
+      const isAtBottom = distanceFromBottom < 20; // Increased tolerance
       
       // If user scrolled up from bottom, pause auto-scrolling
       if (!isAtBottom && !scrollPaused) {
@@ -947,6 +947,26 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
           </div>
         )}
 
+        {/* Resume auto-scroll button - shows when scrolled up */}
+        {scrollPaused && (
+          <div className="px-3 pb-2">
+            <button
+              onClick={() => {
+                setScrollPaused(false);
+                if (listRef.current) {
+                  listRef.current.scrollTop = listRef.current.scrollHeight;
+                }
+              }}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+              Resume auto-scroll
+            </button>
+          </div>
+        )}
+
         {/* Input form */}
         <form className="p-3" onSubmit={onSubmit}>
           <input
@@ -964,24 +984,6 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             maxLength={500}
           />
         </form>
-
-        {/* Resume auto-scroll button - shows when scrolled up */}
-        {scrollPaused && (
-          <button
-            onClick={() => {
-              setScrollPaused(false);
-              if (listRef.current) {
-                listRef.current.scrollTop = listRef.current.scrollHeight;
-              }
-            }}
-            className="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-200 flex items-center gap-2 z-10"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-            Resume auto-scroll
-          </button>
-        )}
       </div>
     </div>
   );
