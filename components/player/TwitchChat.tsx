@@ -1000,7 +1000,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
         {/* Resume auto-scroll button - shows when scrolled up */}
         {scrollPaused && (
-          <div className="px-3 pb-2">
+          <div className="absolute bottom-20 right-4 z-10">
             <button
               onClick={() => {
                 setScrollPaused(false);
@@ -1008,12 +1008,12 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                   listRef.current.scrollTop = listRef.current.scrollHeight;
                 }
               }}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+              title="Resume auto-scroll"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
               </svg>
-              Resume auto-scroll
             </button>
           </div>
         )}
