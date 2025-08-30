@@ -9,7 +9,7 @@ interface PlayerProps {
   parent: string;
 }
 
-export function DevWatchPlayer({ channel, parent }: PlayerProps) {
+export default function DevWatchPlayer({ channel, parent }: PlayerProps) {
   const [adBlockEnabled, setAdBlockEnabled] = useState(false); // Start with ad blocking disabled
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [embedError, setEmbedError] = useState<string | null>(null);
@@ -87,12 +87,12 @@ export function DevWatchPlayer({ channel, parent }: PlayerProps) {
         onError={handleEmbedError}
       />
       
-      {/* Ad Blocker Overlay */}
-      <AdBlockerOverlay 
+      {/* Ad Blocker Overlay - Commented out as component is missing */}
+      {/* <AdBlockerOverlay 
         enabled={adBlockEnabled} 
         onAdBlocked={handleAdBlocked}
         showDebugInfo={showDebugPanel}
-      />
+      /> */}
       
       {/* Performance Metrics */}
       {showDebugPanel && stats.loadTimeImprovement > 0 && (
@@ -165,7 +165,7 @@ function DevTwitchEmbed({
         }
       }
     };
-  }, [containerRef, channel, parent, adBlockEnabled, onSuccess, onError, useIframe]);
+  }, [containerRef, channel, parent, adBlockEnabled, onSuccess, onError, useIframe, embed]);
 
   if (useIframe) {
     // Fallback to simple iframe embed
