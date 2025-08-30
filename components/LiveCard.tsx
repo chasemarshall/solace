@@ -89,7 +89,6 @@ export default function LiveCard({ s }: { s: Stream }) {
         {s.game_name && (
           <div className="text-xs text-text-muted mt-1 font-medium">{s.game_name}</div>
         )}
-        <div className="text-xs text-text-muted mt-2 font-medium">{fmtViewers(s.viewer_count)} watching</div>
       </div>
     </Link>
   );
