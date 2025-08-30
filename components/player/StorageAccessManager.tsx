@@ -51,23 +51,33 @@ export function StorageAccessProvider({ children }: { children: ReactNode }) {
       return false;
     }
 
-    // Check if Storage Access API is supported
-    if (!document.requestStorageAccess) {
+    // Enhanced browser compatibility check
+    if (typeof document === 'undefined') {
+      setAccessGranted(false);
+      return false;
+    }
+
+    // Check if Storage Access API is supported (Safari 11.1+, Chrome 78+, Arc)
+    if (!('requestStorageAccess' in document)) {
       console.warn('Storage Access API not supported in this browser');
       setAccessGranted(false);
       return false;
     }
 
     try {
-      // First check if we already have access
-      const hasAccess = await document.hasStorageAccess?.();
+      // First check if we already have access (with fallback for older implementations)
+      let hasAccess = false;
+      if ('hasStorageAccess' in document && typeof document.hasStorageAccess === 'function') {
+        hasAccess = await document.hasStorageAccess();
+      }
+      
       if (hasAccess) {
         setAccessGranted(true);
         return true;
       }
 
-      // Request storage access (must be called from user gesture)
-      await document.requestStorageAccess();
+      // Request storage access with enhanced error handling
+      await (document as any).requestStorageAccess();
       setAccessGranted(true);
       
       // Store success state

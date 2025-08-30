@@ -5,6 +5,7 @@ import { ImmersiveProvider } from "@/contexts/ImmersiveContext";
 import { StorageAccessProvider } from "@/components/player/StorageAccessManager";
 import LayoutContent from "@/components/layout/LayoutContent";
 import { Analytics } from "@vercel/analytics/next";
+import BrowserCompatInit from "@/components/ui/BrowserCompatInit";
 
 export const metadata: Metadata = {
   title: "solace. - home",
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-bg text-text min-h-screen">
+        <BrowserCompatInit />
         <ImmersiveProvider>
           <StorageAccessProvider>
             <LayoutContent>

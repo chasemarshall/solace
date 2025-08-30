@@ -184,3 +184,130 @@ a:focus-visible {
     box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 8px rgba(255,107,107,0); 
   }
 }
+
+/* Browser Compatibility Enhancements */
+
+/* Backdrop filter fallbacks for Firefox and older browsers */
+.no-backdrop-filter .backdrop-blur-sm {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.no-backdrop-filter .bg-surface\/60 {
+  background-color: rgba(26, 26, 26, 0.95) !important;
+}
+
+.no-backdrop-filter .bg-surface\/80 {
+  background-color: rgba(26, 26, 26, 0.95) !important;
+}
+
+/* Arc Browser specific optimizations */
+.browser-arc .rounded-xl {
+  border-radius: 12px;
+  transform: translateZ(0); /* Hardware acceleration */
+}
+
+.browser-arc .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+.browser-arc .z-\[999999\] {
+  z-index: 999999;
+  position: fixed;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Firefox specific fixes */
+.browser-firefox .backdrop-blur-sm {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: none;
+}
+
+.browser-firefox .bg-surface\/80 {
+  background-color: rgba(26, 26, 26, 0.9) !important;
+}
+
+.browser-firefox .animate-spin {
+  animation: firefox-spin 1s linear infinite;
+}
+
+@keyframes firefox-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Safari specific optimizations */
+.browser-safari .z-\[999999\] {
+  z-index: 999999;
+  position: fixed;
+  will-change: transform;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.browser-safari .backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+/* Enhanced scrollbar styling for cross-browser support */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera, Arc */
+}
+
+/* Better focus states for all browsers */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid #8b5cf6 !important;
+  outline-offset: 2px !important;
+}
+
+/* Improved performance for animations */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-spin {
+    will-change: transform;
+  }
+  
+  .transition-all {
+    will-change: transform, opacity;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .border-white\/10 {
+    border-color: rgba(255, 255, 255, 0.4) !important;
+  }
+  
+  .bg-surface {
+    background-color: #000000 !important;
+  }
+  
+  .text-text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin {
+    animation: none;
+  }
+  
+  .transition-all {
+    transition: none;
+  }
+  
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
