@@ -67,7 +67,7 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm z-[9999]">
+        <div className="absolute right-0 mt-2 w-48 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm z-[99999] isolate">
           <div className="py-1">
             <div className="px-3 py-2 border-b border-white/10">
               <div className="text-sm font-medium text-white">{user.display_name}</div>
