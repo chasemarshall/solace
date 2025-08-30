@@ -10,7 +10,9 @@ interface UserProfileProps {
 function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showBadges, setShowBadges] = useState(true);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     // Load badge visibility preference
@@ -41,6 +43,23 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     }));
   };
 
+  const updateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  };
+
+  const handleToggleDropdown = () => {
+    if (!isOpen) {
+      updateDropdownPosition();
+    }
+    setIsOpen(!isOpen);
+  };
+
   const handleLogout = () => {
     if (confirm(`Logout from ${user.display_name}?`)) {
       onLogout();
@@ -51,7 +70,8 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        ref={buttonRef}
+        onClick={handleToggleDropdown}
         className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-purple-500/50 transition-all duration-200 flex items-center justify-center"
         title={user.display_name}
       >
@@ -66,8 +86,14 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
         )}
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm z-[99999] isolate">
+      {isOpen && dropdownPosition && (
+        <div 
+          className="fixed w-48 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm z-[999999]"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            right: `${dropdownPosition.right}px`,
+          }}
+        >
           <div className="py-1">
             <div className="px-3 py-2 border-b border-white/10">
               <div className="text-sm font-medium text-white">{user.display_name}</div>
