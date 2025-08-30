@@ -4,6 +4,7 @@ import Header from "@/components/layout/Header";
 import { ImmersiveProvider } from "@/contexts/ImmersiveContext";
 import { StorageAccessProvider } from "@/components/player/StorageAccessManager";
 import LayoutContent from "@/components/layout/LayoutContent";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "solace. - home",
@@ -31,6 +32,7 @@ export default function RootLayout({
             </LayoutContent>
           </StorageAccessProvider>
         </ImmersiveProvider>
+        <Analytics />
       </body>
     </html>
   );
