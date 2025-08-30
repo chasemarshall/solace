@@ -49,6 +49,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [channelId, setChannelId] = useState<string>("");
   const [isLive, setIsLive] = useState<boolean | null>(null);
   const [scrollPaused, setScrollPaused] = useState(false);
+  const [showBadges, setShowBadges] = useState(true);
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -77,6 +78,23 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Badge visibility state management
+  useEffect(() => {
+    // Load badge visibility preference from localStorage
+    const savedShowBadges = localStorage.getItem('chat_show_badges');
+    setShowBadges(savedShowBadges !== 'false'); // default to true
+
+    // Listen for storage changes
+    const handleBadgeStorageChange = (e: StorageEvent) => {
+      if (e.key === 'chat_show_badges') {
+        setShowBadges(e.newValue !== 'false');
+      }
+    };
+
+    window.addEventListener('storage', handleBadgeStorageChange);
+    return () => window.removeEventListener('storage', handleBadgeStorageChange);
   }, []);
 
   // Enhanced user color - make colors more vibrant
@@ -809,7 +827,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
                     <div className="text-sm">
                       <span className="inline-flex items-center gap-1.5 flex-wrap">
                         {/* Badges */}
-                        {m.badges.map((badge, idx) => {
+                        {showBadges && m.badges.map((badge, idx) => {
                           const { emoji, title, description } = getBadgeInfo(badge.setID, badge.version);
                           return (
                             <Tooltip key={`${m.id}-badge-${badge.setID}-${badge.version}-${idx}`} content={`${title}: ${description}`}>
