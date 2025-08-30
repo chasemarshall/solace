@@ -63,32 +63,53 @@ export async function GET(request: NextRequest) {
     const userData = await userResponse.json();
     const user = userData.data[0];
 
-    // Create the authentication data
+    // SECURITY: Store auth data in HTTP-only cookie instead of URL hash
     const authData = {
       user: {
         id: user.id,
         login: user.login,
         display_name: user.display_name,
         profile_image_url: user.profile_image_url,
-        email: user.email,
-      },
-      tokens: {
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_in: tokenData.expires_in,
-        scope: tokenData.scope,
+        // SECURITY: Don't expose email in client-side data
       },
       expires_at: Date.now() + (tokenData.expires_in * 1000),
     };
 
-    // Create response with auth data in URL hash
+    // SECURITY: Store sensitive tokens in HTTP-only cookie
+    const tokenCookieData = {
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expires_in: tokenData.expires_in,
+      scope: tokenData.scope,
+    };
+
     const redirectUrl = new URL('/', siteUrl);
-    redirectUrl.hash = `auth_success=${encodeURIComponent(JSON.stringify(authData))}`;
+    redirectUrl.searchParams.set('auth', 'success');
     
-    return NextResponse.redirect(redirectUrl);
+    const response = NextResponse.redirect(redirectUrl);
+    
+    // SECURITY: Set HTTP-only cookies for tokens
+    response.cookies.set('twitch_tokens', JSON.stringify(tokenCookieData), {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: tokenData.expires_in,
+      path: '/',
+    });
+    
+    // Store user data in non-HTTP-only cookie for client access
+    response.cookies.set('twitch_user', JSON.stringify(authData), {
+      secure: true,
+      sameSite: 'strict', 
+      maxAge: tokenData.expires_in,
+      path: '/',
+    });
+    
+    return response;
     
   } catch (error) {
-    console.error('OAuth callback error:', error);
+    // SECURITY: Log error without exposing sensitive details
+    console.error('OAuth callback error occurred');
     return NextResponse.redirect(new URL('/?auth_error=callback_error', siteUrl));
   }
 }

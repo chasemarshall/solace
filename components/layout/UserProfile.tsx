@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { User, Settings, LogOut } from "lucide-react";
 
 interface UserProfileProps {
@@ -11,8 +12,13 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const [isOpen, setIsOpen] = useState(false);
   const [showBadges, setShowBadges] = useState(true);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     // Load badge visibility preference
@@ -86,13 +92,17 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
         )}
       </button>
 
-      {isOpen && dropdownPosition && (
+      {isOpen && dropdownPosition && mounted && createPortal(
         <div 
-          className="fixed w-48 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm z-[999999]"
+          className="fixed w-48 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm"
           style={{
             top: `${dropdownPosition.top}px`,
             right: `${dropdownPosition.right}px`,
+            zIndex: 2147483647, // Maximum safe z-index value
+            position: 'fixed',
+            isolation: 'isolate',
           }}
+          ref={dropdownRef}
         >
           <div className="py-1">
             <div className="px-3 py-2 border-b border-white/10">
@@ -125,7 +135,8 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
               Logout
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -151,30 +162,39 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
   };
 
   useEffect(() => {
-    // Check for auth data from OAuth callback (in URL hash)
+    // SECURITY: Check for auth data from secure cookie-based OAuth callback
     const handleAuthCallback = () => {
-      const hash = window.location.hash;
-      if (hash.includes('auth_success=')) {
-        const authDataString = hash.split('auth_success=')[1];
-        try {
-          const decodedAuthData = JSON.parse(decodeURIComponent(authDataString));
-          setAuthData(decodedAuthData);
-          onAuthChange?.(true, decodedAuthData);
-          localStorage.setItem('twitch_auth', JSON.stringify(decodedAuthData));
-          
-          // Store chat credentials for TMI
-          localStorage.setItem('twitch_username', decodedAuthData.user.login);
-          localStorage.setItem('twitch_oauth', `oauth:${decodedAuthData.tokens.access_token}`);
-          
-          // Clean up URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          setLoading(false);
-        } catch (e) {
-          setLoading(false);
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('auth') === 'success') {
+        // Read user data from cookie (tokens are in HTTP-only cookie)
+        const userCookie = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('twitch_user='));
+        
+        if (userCookie) {
+          try {
+            const cookieValue = decodeURIComponent(userCookie.split('=')[1]);
+            const decodedAuthData = JSON.parse(cookieValue);
+            setAuthData(decodedAuthData);
+            onAuthChange?.(true, decodedAuthData);
+            localStorage.setItem('twitch_auth', JSON.stringify(decodedAuthData));
+            
+            // Store basic user info for chat (tokens are server-side only now)
+            localStorage.setItem('twitch_username', decodedAuthData.user.login);
+            
+            // Clean up URL
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('auth');
+            window.history.replaceState({}, document.title, newUrl.toString());
+            setLoading(false);
+          } catch (e) {
+            console.error('Failed to parse secure auth data');
+            setLoading(false);
+          }
         }
-      } else if (hash.includes('auth_error=')) {
-        const error = hash.split('auth_error=')[1];
-        // Authentication error
+      } else if (urlParams.get('auth_error')) {
+        const error = urlParams.get('auth_error');
+        console.error('Authentication error:', error);
         setLoading(false);
       }
     };

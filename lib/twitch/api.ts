@@ -20,10 +20,7 @@ async function getAppToken(): Promise<string> {
     throw new Error("Missing TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET environment variables");
   }
   
-  console.log('Attempting to get Twitch app token with credentials:', {
-    clientId: clientId.substring(0, 5) + '...',
-    clientIdLength: clientId.length
-  });
+  // SECURITY: Removed sensitive credential logging
   
   const body = new URLSearchParams({
     client_id: clientId,

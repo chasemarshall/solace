@@ -1,11 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// SECURITY: Allowlist of permitted domains to prevent SSRF attacks
+const ALLOWED_DOMAINS = [
+  'api.twitch.tv',
+  'gql.twitch.tv', 
+  'static-cdn.jtvnw.net',
+  'player.twitch.tv',
+  'embed.twitch.tv',
+  'id.twitch.tv'
+];
+
+function validateUrl(urlString: string): boolean {
+  try {
+    const url = new URL(urlString);
+    
+    // Only allow HTTPS
+    if (url.protocol !== 'https:') {
+      return false;
+    }
+    
+    // Check against allowlist
+    const hostname = url.hostname.toLowerCase();
+    const isAllowed = ALLOWED_DOMAINS.some(domain => 
+      hostname === domain || hostname.endsWith('.' + domain)
+    );
+    
+    if (!isAllowed) {
+      return false;
+    }
+    
+    // Block private/internal networks
+    if (hostname === 'localhost' || 
+        hostname.startsWith('127.') ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('192.168.') ||
+        hostname.includes('internal') ||
+        hostname.includes('local')) {
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const target = searchParams.get('url');
   
   if (!target) {
     return NextResponse.json({ error: 'Missing target URL' }, { status: 400 });
+  }
+
+  // SECURITY: Validate URL before making request
+  if (!validateUrl(target)) {
+    return NextResponse.json({ error: 'Invalid or unauthorized URL' }, { status: 403 });
   }
 
   try {
