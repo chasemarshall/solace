@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserProfile } from "./UserProfile";
+import { UserProfile } from "@/components/layout/UserProfile";
 
 export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");

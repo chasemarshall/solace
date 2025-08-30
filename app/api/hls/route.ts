@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rewriteM3U8 } from '@/lib/m3u8/annotate';
+import { rewriteM3U8 } from '@/lib/video/m3u8';
 
 export async function GET(request: NextRequest) {
   // Dev-only guard

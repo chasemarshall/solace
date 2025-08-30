@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import EnhancedWatchPlayer from "@/components/EnhancedWatchPlayer";
-import TwitchChat from "@/components/TwitchChat";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import FavoriteButton from "@/components/FavoriteButton";
-import StreamStatus from "@/components/StreamStatus";
+import EnhancedWatchPlayer from "@/components/player/EnhancedWatchPlayer";
+import TwitchChat from "@/components/player/TwitchChat";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import FavoriteButton from "@/components/stream/FavoriteButton";
+import StreamStatus from "@/components/stream/StreamStatus";
 import WatchPageClient from "./WatchPageClient";
 
 export const dynamic = "force-dynamic";

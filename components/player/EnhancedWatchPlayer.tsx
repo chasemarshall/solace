@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
-import { useStorageAccess } from "./StorageAccessManager";
+import { useStorageAccess } from "@/components/player/StorageAccessManager";
 import { useImmersive } from "@/contexts/ImmersiveContext";
 
 interface EnhancedWatchPlayerProps {

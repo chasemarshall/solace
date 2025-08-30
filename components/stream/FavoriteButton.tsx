@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { addFavorite, removeFavorite, isFavorite } from "@/lib/favorites";
+import { addFavorite, removeFavorite, isFavorite } from "@/lib/utils/favorites";
 
 export default function FavoriteButton({ channel }: { channel: string }) {
   const [favorited, setFavorited] = useState(false);

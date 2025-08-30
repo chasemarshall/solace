@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import WorkingHlsPlayer from '@/components/WorkingHlsPlayer';
+import DevWatchPlayer from '@/components/dev/DevWatchPlayer';
 import { notFound } from 'next/navigation';
 
 interface DevWatchProps {
@@ -92,7 +92,7 @@ function DevWatchContent({ channel, hlsSrc }: { channel: string; hlsSrc: string 
 function HlsPlayerWithAnalytics({ hlsSrc }: { hlsSrc: string }) {
   return (
     <div className="space-y-4">
-      <WorkingHlsPlayer src={hlsSrc} />
+      <DevWatchPlayer channel="dev" />
       
       <HlsAnalyticsSummary hlsSrc={hlsSrc} />
     </div>

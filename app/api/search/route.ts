@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { helix } from "@/lib/twitch";
+import { helix } from "@/lib/twitch/api";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

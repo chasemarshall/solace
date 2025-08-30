@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import LiveCard from "@/components/LiveCard";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import { getFavorites } from "@/lib/favorites";
+import LiveCard from "@/components/stream/LiveCard";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { getFavorites } from "@/lib/utils/favorites";
 
 type Stream = {
   id: string;

@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import { ImmersiveProvider } from "@/contexts/ImmersiveContext";
-import { StorageAccessProvider } from "@/components/StorageAccessManager";
-import LayoutContent from "@/components/LayoutContent";
+import { StorageAccessProvider } from "@/components/player/StorageAccessManager";
+import LayoutContent from "@/components/layout/LayoutContent";
 
 export const metadata: Metadata = {
   title: "solace. - home",

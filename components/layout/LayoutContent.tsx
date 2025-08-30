@@ -1,9 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
-import Header from "@/components/Header";
+import Header from "@/components/layout/Header";
 import { useImmersive } from "@/contexts/ImmersiveContext";
-import CookieConsent from "@/components/CookieConsent";
+import CookieConsent from "@/components/ui/CookieConsent";
 
 interface LayoutContentProps {
   children: ReactNode;

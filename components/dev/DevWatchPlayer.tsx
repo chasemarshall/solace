@@ -2,8 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAdBlocker } from '@/hooks/useAdBlocker';
-import { AdBlockerOverlay } from './AdBlockerOverlay';
-import { createTwitchEmbedReliable } from '@/lib/sdk/reliableLoader';
+import { createTwitchEmbedReliable } from '@/lib/video/sdk';
 
 interface PlayerProps {
   channel: string;

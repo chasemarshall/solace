@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { connectChat } from "@/lib/twitch/chat";
-import { Tooltip } from "./Tooltip";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 type Badge = {
   setID: string;

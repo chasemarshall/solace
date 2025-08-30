@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { fmtViewers, twitchThumb } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { addFavorite, removeFavorite, isFavorite } from "@/lib/favorites";
+import { addFavorite, removeFavorite, isFavorite } from "@/lib/utils/favorites";
 
 type Stream = {
   id: string;
