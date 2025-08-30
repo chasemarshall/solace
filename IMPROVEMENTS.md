@@ -148,4 +148,76 @@
 
 ---
 
+## 💰 Monetization Integration Research & Plan
+
+**Developer Note: Comprehensive analysis for implementing subscription, gifting, and bits functionality**
+
+### Research Summary
+After extensive research into Twitch's API capabilities, legal restrictions, and best practices, direct payment integration is **not feasible** due to:
+
+- **No Direct Payment APIs**: Twitch doesn't provide APIs for third-party apps to initiate subscriptions, gift subs, or bits transactions
+- **Legal Restrictions**: Twitch retains exclusive monetization rights and prohibits third-party marketplaces
+- **Compliance Requirements**: User data cannot be monetized, and financial transactions must go through official channels
+
+### Recommended Implementation: Smart Deep Linking
+
+**Architecture:**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Solace UI      │ ─► │  Deep Link      │ ─► │  Twitch Native  │
+│  Quick Actions  │    │  Generation     │    │  Sub/Bits Page  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+**Implementation Plan:**
+
+1. **Add "Support Streamer" Panel** in player/chat area
+2. **Generate Smart URLs** to Twitch's official subscription/bits pages
+3. **Pre-populate Channel Info** and return URLs
+4. **Display Subscription Status** using read-only APIs (`channel:read:subscriptions`, `bits:read`)
+
+**Technical Requirements:**
+```typescript
+// New components needed
+components/
+├── player/
+│   ├── StreamerSupport.tsx     // Main support panel
+│   ├── SubscriptionStatus.tsx  // User's sub status
+│   └── QuickActions.tsx        // Deep link buttons
+
+// API endpoints needed  
+app/api/
+├── twitch/
+│   ├── subscription-status/    // Check user sub status
+│   ├── generate-links/         // Create smart deep links
+│   └── channel-info/          // Get streamer details
+```
+
+**Benefits:**
+- ✅ **Legally Compliant**: 100% compliant with all Twitch policies
+- ✅ **User Familiar**: Uses official Twitch interface users trust  
+- ✅ **Quick Implementation**: Can ship in 1-2 weeks
+- ✅ **Low Maintenance**: No complex payment logic to maintain
+- ✅ **Future Proof**: Won't break with Twitch policy changes
+
+**User Flow:**
+```
+User clicks "Subscribe" → Solace generates deep link → Opens Twitch in new tab → 
+User completes subscription → Returns to Solace → Status updates automatically
+```
+
+**OAuth Scopes Needed:**
+- `channel:read:subscriptions` - View subscription status
+- `bits:read` - View bits information and leaderboards
+
+**UI Integration Points:**
+1. **Player Overlay** - Subtle action buttons during stream
+2. **Chat Panel** - Integrated support actions in chat sidebar
+3. **Channel Info** - Expanded streamer support section
+4. **Mobile Optimized** - Touch-friendly interfaces
+
+This approach provides monetization support while staying within Twitch's guidelines and maintaining a seamless user experience.
+
+---
+
 *This list is living document - ideas can be added, modified, or reprioritized based on user feedback and development resources.*
