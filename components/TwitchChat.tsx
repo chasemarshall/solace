@@ -48,6 +48,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [seventvEmotes, setSeventvEmotes] = useState<{ [key: string]: Emote }>({});
   const [channelId, setChannelId] = useState<string>("");
   const [isLive, setIsLive] = useState<boolean | null>(null);
+  const [scrollPaused, setScrollPaused] = useState(false);
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -569,17 +570,55 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
   // Removed smooth auto-scroll functions since we always auto-scroll immediately
 
-  // Auto scroll to bottom when new messages arrive (always scroll)
+  // Auto scroll to bottom when new messages arrive (only if not paused)
   useEffect(() => {
-    if (!listRef.current) return;
-    // Always scroll to bottom immediately when new messages arrive
+    if (!listRef.current || scrollPaused) return;
+    // Scroll to bottom immediately when new messages arrive and not paused
     const el = listRef.current;
     el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  }, [messages, scrollPaused]);
 
-  // Remove scroll detection since we always auto-scroll now
+  // Handle scroll detection for pausing auto-scroll
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
 
-  // Keep pinned to bottom when content resizes (e.g., images/emotes load)
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      const isAtBottom = distanceFromBottom < 10;
+      
+      // If user scrolled up from bottom, pause auto-scrolling
+      if (!isAtBottom && !scrollPaused) {
+        setScrollPaused(true);
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrollPaused]);
+
+  // Handle keyboard events for down arrow to unpause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown' && scrollPaused) {
+        setScrollPaused(false);
+        // Immediately scroll to bottom
+        if (listRef.current) {
+          listRef.current.scrollTop = listRef.current.scrollHeight;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [scrollPaused]);
+
+  // Keep pinned to bottom when content resizes (e.g., images/emotes load) - only if not paused
   useEffect(() => {
     const container = listRef.current;
     if (!container) return;
@@ -587,7 +626,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     const contentEl = (container.firstElementChild as HTMLElement) || container;
 
     const ensureBottom = () => {
-      if (!listRef.current) return;
+      if (!listRef.current || scrollPaused) return;
       listRef.current.scrollTop = listRef.current.scrollHeight;
     };
 
@@ -600,7 +639,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     return () => {
       ro.disconnect();
     };
-  }, []);
+  }, [scrollPaused]);
 
   // Removed scroll functions since we always auto-scroll
 
@@ -730,7 +769,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       {/* Messages */}
       <div 
         ref={listRef} 
-        className="flex-1 overflow-y-hidden overflow-x-hidden"
+        className="flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar"
       >
         <div className="p-1 space-y-0">
           {messages.map((m, msgIndex) => {

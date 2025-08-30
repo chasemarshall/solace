@@ -113,19 +113,18 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
     return (
       <button
         onClick={handleProfileClick}
-        className="px-3 py-2 rounded-lg bg-purple-600 flex items-center justify-center gap-2 hover:ring-2 hover:ring-purple-500/50 transition-all duration-200"
+        className="w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-purple-500/50 transition-all duration-200 flex items-center justify-center"
         title={`${user.display_name} - Click to logout`}
       >
         {user.profile_image_url ? (
           <img
             src={user.profile_image_url}
             alt={user.display_name}
-            className="w-5 h-5 rounded-full object-cover"
+            className="w-8 h-8 rounded-full object-cover"
           />
         ) : (
-          <User className="w-4 h-4 text-white" />
+          <User className="w-5 h-5 text-white" />
         )}
-        <span className="text-sm font-medium text-white">{user.display_name}</span>
       </button>
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageSquare, MessageSquareOff, Maximize } from "lucide-react";
 import { useImmersive } from "@/contexts/ImmersiveContext";
 
@@ -25,6 +25,22 @@ export default function WatchPageClient({
 }: WatchPageClientProps) {
   const [isChatVisible, setIsChatVisible] = useState(true);
   const { isImmersiveMode, setIsImmersiveMode } = useImmersive();
+
+  // Update tab title in immersive mode
+  useEffect(() => {
+    if (isImmersiveMode) {
+      document.title = `${channel} - Twitch`;
+    } else {
+      document.title = `${channel} • solace.`;
+    }
+    
+    // Cleanup: restore original title when component unmounts or exits immersive
+    return () => {
+      if (!isImmersiveMode) {
+        document.title = `${channel} • solace.`;
+      }
+    };
+  }, [isImmersiveMode, channel]);
 
   if (isImmersiveMode) {
     return (
@@ -56,7 +72,7 @@ export default function WatchPageClient({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsChatVisible(!isChatVisible)}
-              className="flex items-center gap-2 px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-lg backdrop-blur-sm transition-all duration-200 text-text hover:text-white"
+              className="flex items-center justify-center px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-lg backdrop-blur-sm transition-all duration-200 text-text hover:text-white"
               title={isChatVisible ? "hide chat" : "show chat"}
             >
               {isChatVisible ? (
@@ -64,19 +80,13 @@ export default function WatchPageClient({
               ) : (
                 <MessageSquare className="h-4 w-4" />
               )}
-              <span className="text-sm font-medium">
-                {isChatVisible ? "hide chat" : "show chat"}
-              </span>
             </button>
             <button
               onClick={() => setIsImmersiveMode(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-lg backdrop-blur-sm transition-all duration-200 text-text hover:text-white"
+              className="flex items-center justify-center px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-lg backdrop-blur-sm transition-all duration-200 text-text hover:text-white"
               title="immersive mode"
             >
               <Maximize className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                immersive
-              </span>
             </button>
             <ErrorBoundary>
               <FavoriteButton channel={channel} />

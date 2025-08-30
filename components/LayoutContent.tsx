@@ -14,9 +14,12 @@ export default function LayoutContent({ children }: LayoutContentProps) {
 
   if (isImmersiveMode) {
     return (
-      <main className="container mx-auto px-4 max-w-7xl">
-        {children}
-      </main>
+      <>
+        <Header />
+        <main className="w-full">
+          {children}
+        </main>
+      </>
     );
   }
 

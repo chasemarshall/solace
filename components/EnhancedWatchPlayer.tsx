@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect } from "react";
 import { useStorageAccess } from "./StorageAccessManager";
+import { useImmersive } from "@/contexts/ImmersiveContext";
 
 interface EnhancedWatchPlayerProps {
   channel: string;
@@ -10,13 +11,14 @@ interface EnhancedWatchPlayerProps {
 
 export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPlayerProps) {
   const { consentGiven, accessGranted, requestAccess } = useStorageAccess();
+  const { isImmersiveMode } = useImmersive();
   const [showAccessPrompt, setShowAccessPrompt] = useState(false);
   const [attempting, setAttempting] = useState(false);
 
   // Get iframe source with proper parent domain
   const getIframeSrc = useCallback(() => {
     const parentDomain = parent || 'localhost';
-    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true`;
+    return `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true&quality=source`;
   }, [channel, parent]);
 
   const handlePlayerClick = async () => {
@@ -51,7 +53,7 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
   return (
     <div className="relative w-full">
       {/* Player Container */}
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+      <div className={`relative w-full aspect-video bg-black overflow-hidden shadow-2xl ${isImmersiveMode ? '' : 'rounded-xl'}`}>
         <iframe 
           src={iframeSrc}
           className="w-full h-full"
