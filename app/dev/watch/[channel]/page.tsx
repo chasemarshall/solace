@@ -92,7 +92,7 @@ function DevWatchContent({ channel, hlsSrc }: { channel: string; hlsSrc: string 
 function HlsPlayerWithAnalytics({ hlsSrc }: { hlsSrc: string }) {
   return (
     <div className="space-y-4">
-      <DevWatchPlayer channel="dev" />
+      <DevWatchPlayer channel="dev" parent="localhost" />
       
       <HlsAnalyticsSummary hlsSrc={hlsSrc} />
     </div>
