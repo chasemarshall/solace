@@ -20,21 +20,27 @@ export default function Header() {
 
   return (
     <header className="border-b border-white/5 bg-surface/60 backdrop-blur mb-8">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="font-semibold tracking-tight text-xl">
-          {isImmersiveMode ? "Twitch" : "solace."}
-        </Link>
-         {!isImmersiveMode && (
-           <form onSubmit={handleSearch} className="flex-1 max-w-xs sm:max-w-none">
-             <input
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-               placeholder="go to channel…"
-               className="w-full sm:w-72 rounded-xl bg-bg px-3 py-2 text-sm outline-none ring-purple-500/30 focus:ring-2 border border-white/10"
-             />
-           </form>
-         )}
-        <UserProfile />
+      <div className="mx-auto max-w-7xl px-4 py-3">
+        <div className="grid grid-cols-3 items-center gap-4">
+          <Link href="/" className="font-semibold tracking-tight text-xl justify-self-start">
+            {isImmersiveMode ? "Twitch" : "solace."}
+          </Link>
+
+          {!isImmersiveMode && (
+            <form onSubmit={handleSearch} className="justify-self-center max-w-xs sm:max-w-sm w-full">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="go to channel…"
+                className="w-full rounded-xl bg-bg px-3 py-2 text-sm outline-none ring-purple-500/30 focus:ring-2 border border-white/10"
+              />
+            </form>
+          )}
+
+          <div className="justify-self-end">
+            <UserProfile />
+          </div>
+        </div>
       </div>
     </header>
   );
