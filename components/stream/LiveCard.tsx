@@ -3,8 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { fmtViewers, twitchThumb } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import { addFavorite, removeFavorite, isFavorite } from "@/lib/utils/favorites";
+import { useState } from "react";
+import { useFavorites } from "@/contexts/FavoritesContext";
 
 type Stream = {
   id: string;
@@ -18,13 +18,11 @@ type Stream = {
 
 export default function LiveCard({ s }: { s: Stream }) {
   const [imageError, setImageError] = useState(false);
-  const [favorited, setFavorited] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const thumb = twitchThumb(s.thumbnail_url, 640, 360);
-  
-  useEffect(() => {
-    setFavorited(isFavorite(s.user_login));
-  }, [s.user_login]);
-  
+
+  const favorited = isFavorite(s.user_login);
+
   const handleImageError = () => {
     setImageError(true);
   };
@@ -32,14 +30,8 @@ export default function LiveCard({ s }: { s: Stream }) {
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (favorited) {
-      removeFavorite(s.user_login);
-      setFavorited(false);
-    } else {
-      addFavorite(s.user_login);
-      setFavorited(true);
-    }
+
+    toggleFavorite(s.user_login);
   };
 
   return (

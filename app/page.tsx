@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import LiveCard from "@/components/stream/LiveCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import { getFavorites } from "@/lib/utils/favorites";
+import { useFavorites } from "@/contexts/FavoritesContext";
 
 type Stream = {
   id: string;
@@ -20,18 +20,8 @@ export default function Home() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const { favorites } = useFavorites();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  // Update favorites when localStorage changes
-  useEffect(() => {
-    const updateFavorites = () => setFavorites(getFavorites());
-    updateFavorites();
-    
-    // Listen for storage changes (favorites updated in other tabs)
-    window.addEventListener('storage', updateFavorites);
-    return () => window.removeEventListener('storage', updateFavorites);
-  }, []);
 
   const load = useCallback(async () => {
     if (loading) return;

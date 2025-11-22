@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import { ImmersiveProvider } from "@/contexts/ImmersiveContext";
+import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { StorageAccessProvider } from "@/components/player/StorageAccessManager";
 import LayoutContent from "@/components/layout/LayoutContent";
 import { Analytics } from "@vercel/analytics/next";
@@ -36,13 +37,15 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-bg text-text min-h-screen">
         <BrowserCompatInit />
-        <ImmersiveProvider>
-          <StorageAccessProvider>
-            <LayoutContent>
-              {children}
-            </LayoutContent>
-          </StorageAccessProvider>
-        </ImmersiveProvider>
+        <FavoritesProvider>
+          <ImmersiveProvider>
+            <StorageAccessProvider>
+              <LayoutContent>
+                {children}
+              </LayoutContent>
+            </StorageAccessProvider>
+          </ImmersiveProvider>
+        </FavoritesProvider>
         <Analytics />
       </body>
     </html>

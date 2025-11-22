@@ -1,29 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { addFavorite, removeFavorite, isFavorite } from "@/lib/utils/favorites";
+import { useState } from "react";
+import { useFavorites } from "@/contexts/FavoritesContext";
 
 export default function FavoriteButton({ channel }: { channel: string }) {
-  const [favorited, setFavorited] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    setFavorited(isFavorite(channel));
-  }, [channel]);
+  const favorited = isFavorite(channel);
 
   const handleToggle = async () => {
     if (isLoading) return; // Prevent double clicks
-    
+
     setIsLoading(true);
-    
+
     try {
-      if (favorited) {
-        removeFavorite(channel);
-        setFavorited(false);
-      } else {
-        addFavorite(channel);
-        setFavorited(true);
-      }
+      toggleFavorite(channel);
     } catch (error) {
       console.error('Error toggling favorite:', error);
     } finally {
