@@ -27,7 +27,7 @@ export default function Header() {
           </Link>
 
           {!isImmersiveMode && (
-            <form onSubmit={handleSearch} className="justify-self-center max-w-xs sm:max-w-sm w-full">
+            <form onSubmit={handleSearch} className="justify-self-center max-w-48 sm:max-w-64 w-full">
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
