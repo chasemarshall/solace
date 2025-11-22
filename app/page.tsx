@@ -131,7 +131,7 @@ retry
                   </svg>
                   favorites
                 </h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {favoriteStreams.map((s) => (
                     <ErrorBoundary key={s.id}>
                       <LiveCard s={s} />
@@ -147,7 +147,7 @@ retry
                 {favoriteStreams.length > 0 && (
                   <h2 className="text-lg font-medium text-text mb-4">all streams</h2>
                 )}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {regularStreams.map((s) => (
                     <ErrorBoundary key={s.id}>
                       <LiveCard s={s} />

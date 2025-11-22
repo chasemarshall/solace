@@ -301,13 +301,49 @@ a:focus-visible {
   .animate-spin {
     animation: none;
   }
-  
+
   .transition-all {
     transition: none;
   }
-  
+
   * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* Mobile layout stability fixes */
+@media (max-width: 640px) {
+  /* Prevent layout shifts during scrolling */
+  html, body {
+    height: 100%;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Stabilize grid layouts on mobile */
+  .grid {
+    contain: layout style paint;
+  }
+
+  /* Prevent horizontal scrolling */
+  * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Improve touch scrolling performance */
+  .grid > * {
+    will-change: auto;
+    transform: translateZ(0);
+  }
+}
+
+/* Prevent viewport height changes from causing layout shifts */
+@media screen and (max-width: 640px) {
+  /* Use fixed positioning for stable layouts */
+  .fixed, .sticky {
+    transform: translateZ(0);
+    will-change: transform;
   }
 }
