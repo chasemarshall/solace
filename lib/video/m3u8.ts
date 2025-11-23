@@ -11,18 +11,18 @@ interface CueInfo {
   data?: string;
 }
 
-export function rewriteM3U8(manifest: string): string {
+export function rewriteM3U8(manifest: string, baseUrl: string): string {
   const skipMode = process.env.DEV_SKIP_ENABLED === 'true';
   const lines = manifest.split('\n');
   const result: string[] = [];
-  
+
   let skipSegments = 0;
   let segmentDuration = 2; // Default 2s target duration
   let inAdBreak = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Always preserve M3U8 header
     if (line.startsWith('#EXTM3U')) {
       result.push(line);
@@ -44,7 +44,7 @@ export function rewriteM3U8(manifest: string): string {
     if (cue) {
       // Always annotate the cue
       result.push(`#EXT-X-COMMENT:annot=cue-detected,type=${cue.type}${cue.duration ? `,duration=${cue.duration}` : ''}`);
-      
+
       if (skipMode && cue.type === 'CUE_OUT' && cue.duration) {
         // Calculate segments to skip based on duration
         skipSegments = Math.ceil(cue.duration / segmentDuration);
@@ -67,7 +67,7 @@ export function rewriteM3U8(manifest: string): string {
         // Skip this EXTINF and the next segment URL
         skipSegments--;
         i++; // Skip next line (segment URL)
-        
+
         // Insert discontinuity marker when skipping ends
         if (skipSegments === 0) {
           result.push('#EXT-X-DISCONTINUITY');
@@ -83,8 +83,22 @@ export function rewriteM3U8(manifest: string): string {
       inAdBreak = false;
     }
 
-    // Pass through all other lines
-    result.push(line);
+    // URL Rewriting Logic
+    if (line && !line.startsWith('#')) {
+      try {
+        // Resolve relative URLs against the base URL
+        const absoluteUrl = new URL(line, baseUrl).toString();
+        // Rewrite to go through our proxy
+        const proxiedUrl = `/api/hls?src=${encodeURIComponent(absoluteUrl)}`;
+        result.push(proxiedUrl);
+      } catch (e) {
+        // If URL parsing fails, keep original line (unlikely for valid M3U8)
+        result.push(line);
+      }
+    } else {
+      // Pass through all other lines (tags, comments)
+      result.push(line);
+    }
   }
 
   return result.join('\n');
@@ -142,13 +156,13 @@ export function getAnnotationStats(manifest: string) {
     if (line.includes('annot=cue-detected')) {
       stats.cueCount++;
       stats.lastCueTime = new Date();
-      
+
       if (line.includes('type=SCTE35')) stats.scte35Count++;
       if (line.includes('type=CUE_OUT')) stats.cueOutCount++;
       if (line.includes('type=CUE_IN')) stats.cueInCount++;
       if (line.includes('type=DATERANGE')) stats.dateRangeCount++;
     }
-    
+
     if (line.startsWith('#EXT-X-DISCONTINUITY')) {
       stats.discontinuities++;
     }

@@ -632,37 +632,68 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     };
   }, [channel, username, oauth]);
 
-  // Removed smooth auto-scroll functions since we always auto-scroll immediately
+  // Enhanced auto-scroll with requestAnimationFrame for reliability during rapid messages
+  const scrollToBottom = useCallback(() => {
+    if (!listRef.current || scrollPaused) return;
+
+    const el = listRef.current;
+    const targetScrollTop = el.scrollHeight;
+
+    // Use requestAnimationFrame for guaranteed execution
+    requestAnimationFrame(() => {
+      el.scrollTop = targetScrollTop;
+    });
+  }, [scrollPaused]);
 
   // Auto scroll to bottom when new messages arrive (only if not paused)
   useEffect(() => {
-    if (!listRef.current || scrollPaused) return;
-    // Scroll to bottom immediately when new messages arrive and not paused
-    const el = listRef.current;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, scrollPaused]);
+    if (scrollPaused) return;
+
+    // Debounce rapid message updates to prevent excessive scrolling
+    const timeoutId = setTimeout(() => {
+      scrollToBottom();
+    }, 0); // Next tick to batch rapid updates
+
+    return () => clearTimeout(timeoutId);
+  }, [messages.length, scrollToBottom, scrollPaused]);
+
+  // Enhanced scroll detection with better accuracy during rapid messages
+  const isNearBottom = useCallback((element: HTMLElement): boolean => {
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    // More generous tolerance for rapid message influx
+    return distanceFromBottom < 50;
+  }, []);
 
   // Handle scroll detection for pausing auto-scroll
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
 
+    let scrollTimeout: NodeJS.Timeout;
+
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = el;
-      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-      const isAtBottom = distanceFromBottom < 20; // Increased tolerance
-      
-      // If user scrolled up from bottom, pause auto-scrolling
-      if (!isAtBottom && !scrollPaused) {
-        setScrollPaused(true);
-      }
+      // Debounce scroll events to avoid excessive checks during rapid scrolling
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        const wasNearBottom = isNearBottom(el);
+
+        if (wasNearBottom && scrollPaused) {
+          // User scrolled back to bottom, resume auto-scroll
+          setScrollPaused(false);
+        } else if (!wasNearBottom && !scrollPaused) {
+          // User scrolled up from bottom, pause auto-scroll
+          setScrollPaused(true);
+        }
+      }, 50);
     };
 
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       el.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
     };
-  }, [scrollPaused]);
+  }, [scrollPaused, isNearBottom]);
 
   // Handle keyboard events for down arrow to unpause
   useEffect(() => {
@@ -670,9 +701,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       if (e.key === 'ArrowDown' && scrollPaused) {
         setScrollPaused(false);
         // Immediately scroll to bottom
-        if (listRef.current) {
-          listRef.current.scrollTop = listRef.current.scrollHeight;
-        }
+        scrollToBottom();
       }
     };
 
@@ -680,7 +709,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [scrollPaused]);
+  }, [scrollPaused, scrollToBottom]);
 
   // Keep pinned to bottom when content resizes (e.g., images/emotes load) - only if not paused
   useEffect(() => {
@@ -690,8 +719,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     const contentEl = (container.firstElementChild as HTMLElement) || container;
 
     const ensureBottom = () => {
-      if (!listRef.current || scrollPaused) return;
-      listRef.current.scrollTop = listRef.current.scrollHeight;
+      if (scrollPaused) return;
+      scrollToBottom();
     };
 
     const ro = new ResizeObserver(ensureBottom);
@@ -703,7 +732,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     return () => {
       ro.disconnect();
     };
-  }, [scrollPaused]);
+  }, [scrollPaused, scrollToBottom]);
 
   // Removed scroll functions since we always auto-scroll
 
@@ -848,8 +877,9 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
       {/* Header */}
       <div className="bg-surface border-b border-white/10 p-3 rounded-t-xl">
         <div className="flex items-center gap-2">
-          <div className={`h-2 w-2 rounded-full ${isLive === true ? 'bg-red-500 animate-pulse' : isLive === false ? 'bg-gray-500' : 'bg-gray-500 animate-pulse'}`}></div>
-          <span className="text-sm font-bold text-white tracking-wide">live chat</span>
+          {/* Hide live indicator on mobile to reduce visual clutter */}
+          <div className={`hidden md:block h-2 w-2 rounded-full ${isLive === true ? 'bg-red-500 animate-pulse' : isLive === false ? 'bg-gray-500' : 'bg-gray-500 animate-pulse'}`}></div>
+          <span className="hidden md:block text-sm font-bold text-white tracking-wide">live chat</span>
         </div>
       </div>
 
@@ -1022,9 +1052,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             <button
               onClick={() => {
                 setScrollPaused(false);
-                if (listRef.current) {
-                  listRef.current.scrollTop = listRef.current.scrollHeight;
-                }
+                scrollToBottom();
               }}
               className="w-10 h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
               title="Resume auto-scroll"
