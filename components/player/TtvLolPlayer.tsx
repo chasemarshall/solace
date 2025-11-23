@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 import { useImmersive } from '@/contexts/ImmersiveContext';
+import { findWorkingProxy, ProxyHealthMonitor } from '@/lib/twitch/proxyFailover';
+import type { ProxyEndpoint } from '@/lib/twitch/proxyConfig';
 
 interface TtvLolPlayerProps {
   channel: string;
@@ -12,82 +14,164 @@ interface TtvLolPlayerProps {
 export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const healthMonitorRef = useRef<ProxyHealthMonitor | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [qualityLevels, setQualityLevels] = useState<Array<{ level: number; height: number; bitrate: number }>>([]);
   const [currentQuality, setCurrentQuality] = useState<number>(-1);
+  const [currentProxy, setCurrentProxy] = useState<ProxyEndpoint | null>(null);
+  const [failoverAttempts, setFailoverAttempts] = useState(0);
   const { isImmersiveMode } = useImmersive();
 
   useEffect(() => {
     if (!videoRef.current || !channel) return;
 
-    // TTV LOL PRO API endpoint - provides ad-free Twitch streams
-    const streamUrl = `/api/hls?src=${encodeURIComponent(`https://api.ttv.lol/playlist/${encodeURIComponent(channel)}.m3u8`)}`;
+    let isMounted = true;
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        lowLatencyMode: true,
-        backBufferLength: 30,
-        maxBufferLength: 60,
-        enableWorker: true,
-        debug: false,
+    // Initialize health monitor for automatic proxy switching
+    if (!healthMonitorRef.current) {
+      healthMonitorRef.current = new ProxyHealthMonitor((newProxy) => {
+        console.log(`[TtvLolPlayer] Switched to ${newProxy.name}`);
+        setCurrentProxy(newProxy);
       });
-
-      hlsRef.current = hls;
-
-      // Manifest loaded - extract quality levels
-      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-        const levels = data.levels.map((level: any, index: number) => ({
-          level: index,
-          height: level.height,
-          bitrate: level.bitrate,
-        }));
-        setQualityLevels(levels);
-        setIsLoading(false);
-      });
-
-      // Track current quality level
-      hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
-        setCurrentQuality(data.level);
-      });
-
-      // Error handling
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error('HLS Error:', data);
-
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              console.warn('TtvLolPlayer: Network error, triggering fallback');
-              onError?.();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              console.warn('TtvLolPlayer: Media error, attempting recovery');
-              hls.recoverMediaError();
-              break;
-            default:
-              console.warn('TtvLolPlayer: Fatal error, triggering fallback');
-              onError?.();
-              break;
-          }
-        }
-      });
-
-      // Load and attach
-      hls.loadSource(streamUrl);
-      hls.attachMedia(videoRef.current);
-
-      return () => {
-        hls.destroy();
-        hlsRef.current = null;
-      };
-    } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari)
-      videoRef.current.src = streamUrl;
-      setIsLoading(false);
-    } else {
-      setLoadError('HLS not supported in this browser');
     }
+
+    const initializePlayer = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError(null);
+
+        // Find a working proxy using failover system
+        console.log('[TtvLolPlayer] Finding working proxy...');
+        const result = await findWorkingProxy(channel);
+
+        if (!isMounted) return;
+
+        if (!result.success || !result.streamUrl) {
+          console.error('[TtvLolPlayer] All proxies failed');
+          setLoadError('All proxy servers unavailable');
+          setFailoverAttempts(result.attempts.length);
+          onError?.();
+          return;
+        }
+
+        // Set the working proxy
+        setCurrentProxy(result.proxy!);
+        healthMonitorRef.current?.setCurrentProxy(result.proxy!);
+        setFailoverAttempts(result.attempts.length);
+
+        console.log(`[TtvLolPlayer] Using ${result.proxy!.name} (${result.proxy!.region})`);
+
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            lowLatencyMode: true,
+            backBufferLength: 30,
+            maxBufferLength: 60,
+            enableWorker: true,
+            debug: false,
+          });
+
+          hlsRef.current = hls;
+
+          // Manifest loaded - extract quality levels
+          hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+            if (!isMounted) return;
+            const levels = data.levels.map((level: any, index: number) => ({
+              level: index,
+              height: level.height,
+              bitrate: level.bitrate,
+            }));
+            setQualityLevels(levels);
+            setIsLoading(false);
+            healthMonitorRef.current?.reportSuccess();
+          });
+
+          // Track current quality level
+          hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+            if (!isMounted) return;
+            setCurrentQuality(data.level);
+          });
+
+          // Error handling with automatic proxy switching
+          hls.on(Hls.Events.ERROR, async (event, data) => {
+            console.error('[TtvLolPlayer] HLS Error:', data);
+
+            if (data.fatal) {
+              const shouldSwitch = healthMonitorRef.current?.reportFailure();
+
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.warn('[TtvLolPlayer] Network error detected');
+
+                  if (shouldSwitch) {
+                    console.log('[TtvLolPlayer] Too many failures, trying alternative proxy...');
+                    const alternativeProxy = await healthMonitorRef.current?.findAlternativeProxy(
+                      channel,
+                      currentProxy ?? undefined
+                    );
+
+                    if (alternativeProxy && isMounted) {
+                      console.log(`[TtvLolPlayer] Switching to ${alternativeProxy.name}`);
+                      const newStreamUrl = `/api/hls?src=${encodeURIComponent(
+                        alternativeProxy.getPlaylistUrl(channel)
+                      )}`;
+                      hls.loadSource(newStreamUrl);
+                      setCurrentProxy(alternativeProxy);
+                    } else {
+                      console.error('[TtvLolPlayer] No alternative proxy available, triggering fallback');
+                      onError?.();
+                    }
+                  } else {
+                    console.log('[TtvLolPlayer] Attempting network recovery...');
+                    hls.startLoad();
+                  }
+                  break;
+
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.warn('[TtvLolPlayer] Media error, attempting recovery');
+                  hls.recoverMediaError();
+                  break;
+
+                default:
+                  console.warn('[TtvLolPlayer] Fatal error, triggering fallback');
+                  onError?.();
+                  break;
+              }
+            }
+          });
+
+          // Load and attach
+          hls.loadSource(result.streamUrl);
+          if (videoRef.current) {
+            hls.attachMedia(videoRef.current);
+          }
+
+          return () => {
+            isMounted = false;
+            hls.destroy();
+            hlsRef.current = null;
+          };
+        } else if (videoRef.current?.canPlayType('application/vnd.apple.mpegurl')) {
+          // Native HLS support (Safari)
+          videoRef.current.src = result.streamUrl;
+          setIsLoading(false);
+          healthMonitorRef.current?.reportSuccess();
+        } else {
+          setLoadError('HLS not supported in this browser');
+        }
+      } catch (error) {
+        if (!isMounted) return;
+        console.error('[TtvLolPlayer] Initialization error:', error);
+        setLoadError(error instanceof Error ? error.message : 'Failed to initialize player');
+        onError?.();
+      }
+    };
+
+    initializePlayer();
+
+    return () => {
+      isMounted = false;
+    };
   }, [channel]);
 
   const handleQualityChange = (level: number) => {
@@ -127,7 +211,14 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
           <div className="text-white text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto mb-4"></div>
             <div className="text-lg font-semibold">Loading Stream</div>
-            <div className="text-sm opacity-75 mt-2">TTV LOL PRO • Ad-Free</div>
+            <div className="text-sm opacity-75 mt-2">
+              {currentProxy ? `${currentProxy.name} (${currentProxy.region})` : 'Finding best proxy...'} • Ad-Free
+            </div>
+            {failoverAttempts > 1 && (
+              <div className="text-xs opacity-50 mt-1">
+                Tried {failoverAttempts} {failoverAttempts === 1 ? 'proxy' : 'proxies'}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -150,9 +241,14 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
         </div>
       )}
 
-      {/* Ad-free badge */}
-      <div className="absolute top-4 left-4 bg-green-600/90 backdrop-blur-sm text-white px-3 py-1 rounded-lg text-xs font-medium">
-        Ad-Free
+      {/* Ad-free badge with proxy info */}
+      <div className="absolute top-4 left-4 bg-green-600/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg">
+        <div className="flex items-center gap-2">
+          <span>Ad-Free</span>
+          {currentProxy && (
+            <span className="opacity-75">• {currentProxy.name}</span>
+          )}
+        </div>
       </div>
     </div>
   );

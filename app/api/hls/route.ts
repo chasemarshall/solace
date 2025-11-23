@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rewriteM3U8 } from '@/lib/video/m3u8';
+import { PROXY_ALLOWED_HOSTS } from '@/lib/twitch/proxyConfig';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,11 +10,11 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Missing src parameter', { status: 400 });
   }
 
-  // Security: Host Allowlist
+  // Security: Host Allowlist - includes proxy endpoints and Twitch domains
   const ALLOWED_HOSTS = [
-    'api.ttv.lol',
-    'video-weaver', // Twitch video weaver subdomains
-    'ttvnw.net',    // Twitch CDN
+    ...PROXY_ALLOWED_HOSTS,  // Ad-free proxy services
+    'video-weaver',          // Twitch video weaver subdomains
+    'ttvnw.net',            // Twitch CDN
     'twitch.tv',
     'usher.ttvnw.net'
   ];
