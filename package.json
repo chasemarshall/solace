@@ -14,9 +14,11 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
     "@types/dompurify": "^3.0.5",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/postgres": "^0.10.0",
     "date-fns": "^3.6.0",
     "dompurify": "^3.2.6",
     "hls.js": "^1.6.11",
