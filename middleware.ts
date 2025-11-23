@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { randomBytes } from 'crypto';
 
 // SECURITY: Rate limiting storage
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
-// Generate a secure random session ID
+// Generate a secure random session ID using Web Crypto API (Edge Runtime compatible)
 function generateSessionId(): string {
-  return randomBytes(32).toString('hex');
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 function rateLimit(ip: string, limit: number = 100, windowMs: number = 15 * 60 * 1000): boolean {
