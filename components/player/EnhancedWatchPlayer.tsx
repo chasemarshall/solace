@@ -39,7 +39,7 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
   // Show iframe player if user selected it OR if proxy player failed
   if (useFallback || useIframePlayer) {
     const parentDomain = parent || 'localhost';
-    const iframeSrc = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true&quality=source`;
+    const iframeSrc = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true&quality=1080p60`;
 
     return (
       <div className="relative w-full aspect-video bg-black overflow-hidden shadow-2xl rounded-xl">
