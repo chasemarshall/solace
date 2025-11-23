@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { User, Settings, LogOut, Sun, Moon } from "lucide-react";
+import { User, Settings, LogOut, Sun, Moon, Wifi } from "lucide-react";
+import { PROXY_ENDPOINTS } from "@/lib/twitch/proxyConfig";
 
 interface UserProfileProps {
   onAuthChange?: (isAuthenticated: boolean, authData?: any) => void;
@@ -15,6 +16,7 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const [bttvEnabled, setBttvEnabled] = useState(true);
   const [ffzEnabled, setFfzEnabled] = useState(true);
   const [seventvEnabled, setSeventvEnabled] = useState(true);
+  const [selectedProxy, setSelectedProxy] = useState<string>('auto');
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -31,12 +33,14 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     const savedBttv = localStorage.getItem('emotes_bttv');
     const savedFfz = localStorage.getItem('emotes_ffz');
     const savedSeventv = localStorage.getItem('emotes_7tv');
-    
+    const savedProxy = localStorage.getItem('proxy_selection');
+
     setShowBadges(savedShowBadges !== 'false');
     setIsDarkMode(savedTheme !== 'light');
     setBttvEnabled(savedBttv !== 'false');
     setFfzEnabled(savedFfz !== 'false');
     setSeventvEnabled(savedSeventv !== 'false');
+    setSelectedProxy(savedProxy || 'auto');
   }, []);
 
   useEffect(() => {
@@ -103,10 +107,21 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     const newEnabled = !seventvEnabled;
     setSeventvEnabled(newEnabled);
     localStorage.setItem('emotes_7tv', newEnabled.toString());
-    
+
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'emotes_7tv',
       newValue: newEnabled.toString(),
+    }));
+  };
+
+  const handleProxyChange = (proxyId: string) => {
+    setSelectedProxy(proxyId);
+    localStorage.setItem('proxy_selection', proxyId);
+
+    // Trigger storage event for other components
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'proxy_selection',
+      newValue: proxyId,
     }));
   };
 
@@ -266,7 +281,31 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
                 )}
               </div>
             </button>
-            
+
+            {/* Proxy Settings */}
+            <div className="px-3 py-1 text-xs text-text-muted font-medium border-b border-white/5 mt-1">
+              Stream Proxy
+            </div>
+
+            <div className="px-3 py-2">
+              <select
+                value={selectedProxy}
+                onChange={(e) => handleProxyChange(e.target.value)}
+                className="w-full bg-black/40 text-white text-sm px-3 py-2 rounded border border-white/20 hover:border-white/40 focus:border-purple-500 focus:outline-none cursor-pointer"
+              >
+                <option value="auto">Auto (Recommended)</option>
+                {PROXY_ENDPOINTS.map((proxy) => (
+                  <option key={proxy.name} value={proxy.name}>
+                    {proxy.name} - {proxy.region}
+                  </option>
+                ))}
+              </select>
+              <div className="text-xs text-text-muted mt-2 opacity-75">
+                <Wifi className="w-3 h-3 inline mr-1" />
+                {selectedProxy === 'auto' ? 'Automatically selects fastest proxy' : 'Using selected proxy with auto-fallback'}
+              </div>
+            </div>
+
             <button
               onClick={handleLogout}
               className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 border-t border-white/10 mt-1"

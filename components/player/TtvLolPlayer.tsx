@@ -21,7 +21,27 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
   const [currentQuality, setCurrentQuality] = useState<number>(-1);
   const [currentProxy, setCurrentProxy] = useState<ProxyEndpoint | null>(null);
   const [failoverAttempts, setFailoverAttempts] = useState(0);
+  const [preferredProxy, setPreferredProxy] = useState<string>('auto');
   const { isImmersiveMode } = useImmersive();
+
+  // Load proxy preference from localStorage
+  useEffect(() => {
+    const savedProxy = localStorage.getItem('proxy_selection');
+    if (savedProxy) {
+      setPreferredProxy(savedProxy);
+    }
+
+    // Listen for changes to proxy selection
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'proxy_selection' && e.newValue) {
+        setPreferredProxy(e.newValue);
+        // Player will automatically reinitialize due to dependency array
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   useEffect(() => {
     if (!videoRef.current || !channel) return;
@@ -43,7 +63,7 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
 
         // Find a working proxy using failover system
         console.log('[TtvLolPlayer] Finding working proxy...');
-        const result = await findWorkingProxy(channel);
+        const result = await findWorkingProxy(channel, 3, preferredProxy);
 
         if (!isMounted) return;
 
@@ -172,7 +192,8 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
     return () => {
       isMounted = false;
     };
-  }, [channel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel, preferredProxy]);
 
   const handleQualityChange = (level: number) => {
     if (hlsRef.current) {
