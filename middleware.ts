@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { randomBytes } from 'crypto';
 
 // SECURITY: Rate limiting storage
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+// Generate a secure random session ID
+function generateSessionId(): string {
+  return randomBytes(32).toString('hex');
+}
 
 function rateLimit(ip: string, limit: number = 100, windowMs: number = 15 * 60 * 1000): boolean {
   const now = Date.now();
@@ -37,6 +43,19 @@ function rateLimit(ip: string, limit: number = 100, windowMs: number = 15 * 60 *
 
 export function middleware(request: NextRequest) {
   const response = NextResponse.next();
+
+  // Session management: Ensure every visitor has a session cookie
+  const sessionCookie = request.cookies.get('session_id');
+  if (!sessionCookie) {
+    const sessionId = generateSessionId();
+    response.cookies.set('session_id', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: '/',
+    });
+  }
 
   // SECURITY: Add comprehensive security headers
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
