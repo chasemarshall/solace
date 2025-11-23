@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  twitchId    String?  @unique
+  username    String?
+  displayName String?
+  email       String?
+  avatarUrl   String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  favorites   Favorite[]
+  follows     Follow[]
+  preferences UserPreference?
+
+  @@index([twitchId])
+}
+
+model Favorite {
+  id            String   @id @default(cuid())
+  userId        String
+  channelLogin  String
+
+  createdAt     DateTime @default(now())
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelLogin])
+  @@index([userId])
+}
+
+model Follow {
+  id            String    @id @default(cuid())
+  userId        String
+  channelLogin  String
+  displayName   String
+  followedAt    DateTime  @default(now())
+  lastLive      DateTime?
+
+  // Relations
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channelLogin])
+  @@index([userId])
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // Player preferences
+  proxySelection  String?  @default("iframe") // "iframe" or proxy name
+
+  // Chat preferences
+  chatFontSize    Int?     @default(14)
+  showTimestamps  Boolean? @default(false)
+
+  // Other preferences can be added here
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

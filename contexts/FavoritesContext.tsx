@@ -4,16 +4,18 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 interface FavoritesContextType {
   favorites: Set<string>;
-  addFavorite: (channelLogin: string) => void;
-  removeFavorite: (channelLogin: string) => void;
+  addFavorite: (channelLogin: string) => Promise<void>;
+  removeFavorite: (channelLogin: string) => Promise<void>;
   isFavorite: (channelLogin: string) => boolean;
-  toggleFavorite: (channelLogin: string) => void;
+  toggleFavorite: (channelLogin: string) => Promise<void>;
+  isLoading: boolean;
 }
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 const FAVORITES_STORAGE_KEY = 'twitch-favorites';
 
+// Helper to get localStorage favorites (for migration/fallback)
 const getFavoritesFromStorage = (): Set<string> => {
   if (typeof window === 'undefined') return new Set();
   try {
@@ -24,12 +26,26 @@ const getFavoritesFromStorage = (): Set<string> => {
   }
 };
 
-const saveFavoritesToStorage = (favorites: Set<string>) => {
-  if (typeof window === 'undefined') return;
+// Helper to migrate localStorage favorites to database
+const migrateFavoritesToDatabase = async (localFavorites: Set<string>) => {
+  if (localFavorites.size === 0) return;
+
   try {
-    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...favorites]));
-  } catch (e) {
-    console.error('Failed to save favorites:', e);
+    // Add all local favorites to database
+    await Promise.all(
+      Array.from(localFavorites).map(channelLogin =>
+        fetch('/api/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channelLogin }),
+        })
+      )
+    );
+
+    // Clear localStorage after successful migration
+    localStorage.removeItem(FAVORITES_STORAGE_KEY);
+  } catch (error) {
+    console.error('Failed to migrate favorites:', error);
   }
 };
 
@@ -39,53 +55,107 @@ interface FavoritesProviderProps {
 
 export function FavoritesProvider({ children }: FavoritesProviderProps) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize favorites from localStorage
+  // Initialize favorites from database
   useEffect(() => {
-    setFavorites(getFavoritesFromStorage());
-  }, []);
+    const loadFavorites = async () => {
+      try {
+        // First, check for localStorage favorites to migrate
+        const localFavorites = getFavoritesFromStorage();
+        if (localFavorites.size > 0) {
+          await migrateFavoritesToDatabase(localFavorites);
+        }
 
-  // Listen for storage changes (from other tabs/windows)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === FAVORITES_STORAGE_KEY) {
+        // Fetch from database
+        const response = await fetch('/api/favorites');
+        if (response.ok) {
+          const data = await response.json();
+          setFavorites(new Set(data.favorites || []));
+        }
+      } catch (error) {
+        console.error('Failed to load favorites:', error);
+        // Fallback to localStorage if API fails
         setFavorites(getFavoritesFromStorage());
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    loadFavorites();
   }, []);
 
-  const addFavorite = (channelLogin: string) => {
+  const addFavorite = async (channelLogin: string) => {
     const normalizedLogin = channelLogin.toLowerCase();
+
+    // Optimistic update
     setFavorites(prev => {
       const newFavorites = new Set(prev);
       newFavorites.add(normalizedLogin);
-      saveFavoritesToStorage(newFavorites);
       return newFavorites;
     });
+
+    try {
+      const response = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelLogin: normalizedLogin }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add favorite');
+      }
+    } catch (error) {
+      console.error('Error adding favorite:', error);
+      // Revert optimistic update on error
+      setFavorites(prev => {
+        const newFavorites = new Set(prev);
+        newFavorites.delete(normalizedLogin);
+        return newFavorites;
+      });
+    }
   };
 
-  const removeFavorite = (channelLogin: string) => {
+  const removeFavorite = async (channelLogin: string) => {
     const normalizedLogin = channelLogin.toLowerCase();
+
+    // Optimistic update
     setFavorites(prev => {
       const newFavorites = new Set(prev);
       newFavorites.delete(normalizedLogin);
-      saveFavoritesToStorage(newFavorites);
       return newFavorites;
     });
+
+    try {
+      const response = await fetch('/api/favorites', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelLogin: normalizedLogin }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove favorite');
+      }
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+      // Revert optimistic update on error
+      setFavorites(prev => {
+        const newFavorites = new Set(prev);
+        newFavorites.add(normalizedLogin);
+        return newFavorites;
+      });
+    }
   };
 
   const isFavorite = (channelLogin: string): boolean => {
     return favorites.has(channelLogin.toLowerCase());
   };
 
-  const toggleFavorite = (channelLogin: string) => {
+  const toggleFavorite = async (channelLogin: string) => {
     if (isFavorite(channelLogin)) {
-      removeFavorite(channelLogin);
+      await removeFavorite(channelLogin);
     } else {
-      addFavorite(channelLogin);
+      await addFavorite(channelLogin);
     }
   };
 
@@ -95,6 +165,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
     removeFavorite,
     isFavorite,
     toggleFavorite,
+    isLoading,
   };
 
   return (
