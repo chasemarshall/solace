@@ -68,6 +68,11 @@ export function middleware(request: NextRequest) {
 
   // SECURITY: Rate limiting for API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
+    // HLS proxy traffic is extremely chatty; don't rate limit media delivery or manifests
+    if (request.nextUrl.pathname.startsWith('/api/hls')) {
+      return response;
+    }
+
     const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
 
     // Higher limits for auth endpoints, lower for others
