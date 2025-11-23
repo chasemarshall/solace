@@ -37,6 +37,15 @@ NEXT_PUBLIC_TWITCH_PARENT=localhost,127.0.0.1,solacestreams.vercel.app
 NEXT_PUBLIC_DEV_HLS_SRC=your_test_hls_stream_url
 ```
 
+### Database migrations
+
+Run database migrations separately from the Next.js build so Vercel deployments don't hang waiting for a database connection:
+
+```bash
+npm run db:migrate
+npm run build
+```
+
 ### Twitch App Configuration
 
 1. Go to [Twitch Developer Console](https://dev.twitch.tv/console/apps)
