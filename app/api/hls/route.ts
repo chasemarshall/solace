@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rewriteM3U8 } from '@/lib/video/m3u8';
 
 export async function GET(request: NextRequest) {
-  // Dev-only guard
-  if (process.env.NODE_ENV === 'production') {
-    return new NextResponse('Not found', { status: 404 });
-  }
 
   const { searchParams } = new URL(request.url);
   const src = searchParams.get('src');
