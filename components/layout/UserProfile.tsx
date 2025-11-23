@@ -40,7 +40,14 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     setBttvEnabled(savedBttv !== 'false');
     setFfzEnabled(savedFfz !== 'false');
     setSeventvEnabled(savedSeventv !== 'false');
-    setSelectedProxy(savedProxy || 'auto');
+
+    // Default to iframe player if no preference set
+    if (!savedProxy) {
+      localStorage.setItem('proxy_selection', 'iframe');
+      setSelectedProxy('iframe');
+    } else {
+      setSelectedProxy(savedProxy);
+    }
   }, []);
 
   useEffect(() => {
@@ -293,7 +300,8 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
                 onChange={(e) => handleProxyChange(e.target.value)}
                 className="w-full bg-black/40 text-white text-sm px-3 py-2 rounded border border-white/20 hover:border-white/40 focus:border-purple-500 focus:outline-none cursor-pointer"
               >
-                <option value="auto">Auto (Recommended)</option>
+                <option value="iframe">Default Twitch Player (iframe)</option>
+                <option value="auto">Auto Proxy (Ad-Free)</option>
                 {PROXY_ENDPOINTS.map((proxy) => (
                   <option key={proxy.name} value={proxy.name}>
                     {proxy.name} - {proxy.region}
@@ -302,7 +310,11 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
               </select>
               <div className="text-xs text-text-muted mt-2 opacity-75">
                 <Wifi className="w-3 h-3 inline mr-1" />
-                {selectedProxy === 'auto' ? 'Automatically selects fastest proxy' : 'Using selected proxy with auto-fallback'}
+                {selectedProxy === 'iframe'
+                  ? 'Using standard Twitch player (with ads)'
+                  : selectedProxy === 'auto'
+                    ? 'Automatically selects fastest ad-free proxy'
+                    : 'Using selected proxy with auto-fallback'}
               </div>
             </div>
 
