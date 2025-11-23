@@ -33,12 +33,10 @@ export default function WatchPageClient({
     } else {
       document.title = `${channel} • solace.`;
     }
-    
-    // Cleanup: restore original title when component unmounts or exits immersive
+
+    // Cleanup: restore original title when component unmounts
     return () => {
-      if (!isImmersiveMode) {
-        document.title = `${channel} • solace.`;
-      }
+      document.title = `${channel} • solace.`;
     };
   }, [isImmersiveMode, channel]);
 

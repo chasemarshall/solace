@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { isAdRequest, isTwitchRequest } from '@/lib/constants/adPatterns';
 
 interface AdBlockerStats {
   blockedRequests: number;
@@ -14,6 +15,9 @@ interface AdBlockerHook {
   errors: string[];
 }
 
+// Track if service worker has been registered to prevent duplicate registrations
+let swRegistered = false;
+
 export function useAdBlocker(enabled: boolean = false): AdBlockerHook {
   const [stats, setStats] = useState<AdBlockerStats>({
     blockedRequests: 0,
@@ -24,7 +28,7 @@ export function useAdBlocker(enabled: boolean = false): AdBlockerHook {
   });
   const [isActive, setIsActive] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  
+
   const originalFetchRef = useRef<typeof window.fetch>();
   const swRegistrationRef = useRef<ServiceWorkerRegistration>();
 
@@ -45,15 +49,13 @@ export function useAdBlocker(enabled: boolean = false): AdBlockerHook {
       if (originalFetchRef.current) {
         window.fetch = originalFetchRef.current;
       }
-      if (swRegistrationRef.current) {
-        swRegistrationRef.current.unregister();
-      }
       setIsActive(false);
       return;
     }
 
-    // Register enhanced service worker
-    if ('serviceWorker' in navigator) {
+    // Register service worker only once per app lifecycle
+    if ('serviceWorker' in navigator && !swRegistered) {
+      swRegistered = true;
       navigator.serviceWorker.register('/sw-adblock-dev.js', {
         scope: '/'
       })
@@ -77,7 +79,11 @@ export function useAdBlocker(enabled: boolean = false): AdBlockerHook {
         .catch(err => {
           console.error('SW registration failed:', err);
           addError(`Service Worker registration failed: ${err.message}`);
+          swRegistered = false; // Allow retry on error
         });
+    } else if (swRegistrationRef.current) {
+      // Service worker already registered
+      setIsActive(true);
     }
 
     // Enhanced fetch interception
@@ -131,45 +137,6 @@ export function useAdBlocker(enabled: boolean = false): AdBlockerHook {
   }, [enabled, updateStats, addError]);
 
   return { stats, isActive, errors };
-}
-
-function isAdRequest(url: string): boolean {
-  const adPatterns = [
-    // Traditional ad servers
-    'ads.twitch.tv',
-    'twitchads.com',
-    'doubleclick.net',
-    'googlesyndication.com',
-    'amazon-adsystem.com',
-    'pubads.g.doubleclick.net',
-    
-    // SSAI patterns
-    'video-weaver.',
-    'video-edge-',
-    'cloudfront.net',
-    
-    // Analytics
-    'analytics.twitch.tv',
-    'spade.twitch.tv',
-    'countess.twitch.tv',
-    
-    // Ad-specific path patterns
-    '/ads/',
-    '/advertising/',
-    '/commercial/',
-    'stitched-ad',
-    'ad-',
-    'preroll',
-    'midroll'
-  ];
-  
-  return adPatterns.some(pattern => url.toLowerCase().includes(pattern.toLowerCase()));
-}
-
-function isTwitchRequest(url: string): boolean {
-  return url.includes('twitch.tv') || 
-         url.includes('ttvnw.net') || 
-         url.includes('jtvnw.net');
 }
 
 function shouldProxy(url: string): boolean {
