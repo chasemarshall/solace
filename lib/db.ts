@@ -1,3 +1,5 @@
+import { Pool } from '@vercel/postgres';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 declare global {
@@ -5,9 +7,10 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-export const prisma = global.prisma || new PrismaClient({
-  datasourceUrl: process.env.POSTGRES_URL,
-});
+const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
+const adapter = new PrismaPg(pool);
+
+export const prisma = global.prisma || new PrismaClient({ adapter });
 
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
