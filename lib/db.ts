@@ -7,7 +7,7 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-const pool = new Pool({ connectionString: process.env.POSTGRES_URL });
+const pool = new Pool({ connectionString: process.env.POSTGRES_PRISMA_URL });
 const adapter = new PrismaPg(pool);
 
 export const prisma = global.prisma || new PrismaClient({ adapter });
