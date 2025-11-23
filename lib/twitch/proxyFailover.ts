@@ -82,15 +82,32 @@ async function testProxy(
 /**
  * Attempts to find a working proxy for the given channel
  * Tries proxies in priority order with automatic failover
+ * @param channel - The Twitch channel name
+ * @param maxRetries - Maximum number of proxies to try
+ * @param preferredProxyName - Optional proxy name to try first (e.g., "Luminous EU")
  */
 export async function findWorkingProxy(
   channel: string,
-  maxRetries: number = FAILOVER_CONFIG.maxRetries
+  maxRetries: number = FAILOVER_CONFIG.maxRetries,
+  preferredProxyName?: string
 ): Promise<FailoverResult> {
   const attempts: ProxyTestResult[] = [];
-  const sortedProxies = [...PROXY_ENDPOINTS].sort(
+  let sortedProxies = [...PROXY_ENDPOINTS].sort(
     (a, b) => a.priority - b.priority
   );
+
+  // If a preferred proxy is specified, try it first
+  if (preferredProxyName && preferredProxyName !== 'auto') {
+    const preferredProxy = PROXY_ENDPOINTS.find(p => p.name === preferredProxyName);
+    if (preferredProxy) {
+      console.log(`[Proxy Failover] User selected ${preferredProxy.name}, trying first...`);
+      // Move preferred proxy to the front
+      sortedProxies = [
+        preferredProxy,
+        ...sortedProxies.filter(p => p.name !== preferredProxyName)
+      ];
+    }
+  }
 
   // Try up to maxRetries proxies
   const proxiesToTry = sortedProxies.slice(0, maxRetries);
