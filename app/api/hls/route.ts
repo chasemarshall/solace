@@ -55,17 +55,25 @@ export async function HEAD(request: NextRequest) {
 
   try {
     // Test if the proxy endpoint is reachable
+    const headers = {
+      'Accept': 'application/x-mpegURL, application/vnd.apple.mpegurl, application/json, text/plain, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Referer': 'https://www.twitch.tv/',
+      'Origin': 'https://www.twitch.tv'
+    } as const;
+
     const response = await fetch(src, {
       method: 'HEAD',
-      headers: {
-        'Accept': 'application/x-mpegURL, application/vnd.apple.mpegurl, application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.twitch.tv/',
-        'Origin': 'https://www.twitch.tv'
-      },
+      headers,
     });
 
-    if (!response.ok) {
+    // Some proxy endpoints block HEAD; retry with GET so failover still works
+    const validationResponse =
+      response.status === 405 || response.status === 501
+        ? await fetch(src, { method: 'GET', headers })
+        : response;
+
+    if (!validationResponse.ok) {
       return new NextResponse(null, { status: 502 });
     }
 
