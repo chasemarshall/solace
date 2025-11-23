@@ -59,10 +59,10 @@ export async function GET(request: NextRequest) {
     const contentType = response.headers.get('content-type');
     const originalText = await response.text();
 
-    // Verify it's actually a manifest (basic check)
-    if (!originalText.includes('#EXTM3U') && !contentType?.includes('mpegurl') && !contentType?.includes('json')) {
-      console.error('Invalid upstream content type or body:', contentType, originalText.substring(0, 100));
-      // Proceed anyway but log it, might be a weird error page
+    // Strict validation: Must be a valid M3U8 manifest
+    if (!originalText.trim().startsWith('#EXTM3U')) {
+      console.error('Invalid upstream manifest (not M3U8):', contentType, originalText.substring(0, 200));
+      return new NextResponse('Upstream returned invalid manifest', { status: 502 });
     }
 
     // Process through our annotator
