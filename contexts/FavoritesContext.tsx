@@ -69,10 +69,11 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
 
         // Fetch from database
         const response = await fetch('/api/favorites');
-        if (response.ok) {
-          const data = await response.json();
-          setFavorites(new Set(data.favorites || []));
+        if (!response.ok) {
+          throw new Error(`Failed to fetch favorites: ${response.status}`);
         }
+        const data = await response.json();
+        setFavorites(new Set(data.favorites || []));
       } catch (error) {
         console.error('Failed to load favorites:', error);
         // Fallback to localStorage if API fails
