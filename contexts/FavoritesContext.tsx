@@ -107,12 +107,21 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
       }
     } catch (error) {
       console.error('Error adding favorite:', error);
-      // Revert optimistic update on error
-      setFavorites(prev => {
-        const newFavorites = new Set(prev);
-        newFavorites.delete(normalizedLogin);
-        return newFavorites;
-      });
+      // Fallback to localStorage when API fails
+      try {
+        const currentFavorites = getFavoritesFromStorage();
+        currentFavorites.add(normalizedLogin);
+        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...currentFavorites]));
+        console.log('Favorite saved to localStorage as fallback');
+      } catch (storageError) {
+        console.error('Failed to save to localStorage:', storageError);
+        // Only revert if both API and localStorage fail
+        setFavorites(prev => {
+          const newFavorites = new Set(prev);
+          newFavorites.delete(normalizedLogin);
+          return newFavorites;
+        });
+      }
     }
   };
 
@@ -138,12 +147,21 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
       }
     } catch (error) {
       console.error('Error removing favorite:', error);
-      // Revert optimistic update on error
-      setFavorites(prev => {
-        const newFavorites = new Set(prev);
-        newFavorites.add(normalizedLogin);
-        return newFavorites;
-      });
+      // Fallback to localStorage when API fails
+      try {
+        const currentFavorites = getFavoritesFromStorage();
+        currentFavorites.delete(normalizedLogin);
+        localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify([...currentFavorites]));
+        console.log('Favorite removed from localStorage as fallback');
+      } catch (storageError) {
+        console.error('Failed to save to localStorage:', storageError);
+        // Only revert if both API and localStorage fail
+        setFavorites(prev => {
+          const newFavorites = new Set(prev);
+          newFavorites.add(normalizedLogin);
+          return newFavorites;
+        });
+      }
     }
   };
 
