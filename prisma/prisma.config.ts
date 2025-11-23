@@ -1,9 +1,9 @@
-import { defineConfig } from '@prisma/client';
+import { defineConfig, env } from 'prisma/config';
+import 'dotenv/config';
 
 export default defineConfig({
-  datasources: {
-    db: {
-      url: process.env.POSTGRES_URL,
-    },
+  schema: 'prisma/schema.prisma',
+  datasource: {
+    url: env('POSTGRES_URL'),
   },
 });
