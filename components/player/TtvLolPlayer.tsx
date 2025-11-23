@@ -6,9 +6,10 @@ import { useImmersive } from '@/contexts/ImmersiveContext';
 
 interface TtvLolPlayerProps {
   channel: string;
+  onError?: () => void;
 }
 
-export default function TtvLolPlayer({ channel }: TtvLolPlayerProps) {
+export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,16 +58,16 @@ export default function TtvLolPlayer({ channel }: TtvLolPlayerProps) {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              setLoadError('Network error - stream may be offline or unavailable');
-              // Try to recover
-              hls.startLoad();
+              console.warn('TtvLolPlayer: Network error, triggering fallback');
+              onError?.();
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              setLoadError('Media error - attempting to recover');
+              console.warn('TtvLolPlayer: Media error, attempting recovery');
               hls.recoverMediaError();
               break;
             default:
-              setLoadError(`Fatal error: ${data.details}`);
+              console.warn('TtvLolPlayer: Fatal error, triggering fallback');
+              onError?.();
               break;
           }
         }
