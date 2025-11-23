@@ -34,9 +34,9 @@ export async function GET(request: NextRequest) {
     }
 
     const originalText = await response.text();
-    
+
     // Process through our annotator
-    const annotatedText = rewriteM3U8(originalText);
+    const annotatedText = rewriteM3U8(originalText, src);
 
     return new NextResponse(annotatedText, {
       headers: {
