@@ -15,7 +15,7 @@ export default function FavoriteButton({ channel }: { channel: string }) {
     setIsLoading(true);
 
     try {
-      toggleFavorite(channel);
+      await toggleFavorite(channel);
     } catch (error) {
       console.error('Error toggling favorite:', error);
     } finally {
