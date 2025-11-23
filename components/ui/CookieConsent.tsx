@@ -64,7 +64,7 @@ export default function CookieConsent() {
                 <p className="font-semibold text-white mb-1.5">What we store in our database:</p>
                 <ul className="space-y-1 ml-3 list-disc">
                   <li><strong>User Profile:</strong> Twitch ID, username, display name, email, avatar</li>
-                  <li><strong>Favorites:</strong> Channels you've favorited</li>
+                  <li><strong>Favorites:</strong> Channels you&apos;ve favorited</li>
                   <li><strong>Follows:</strong> Channels you follow, last live timestamps</li>
                   <li><strong>Preferences:</strong> Player proxy selection, chat font size, timestamp visibility</li>
                 </ul>
