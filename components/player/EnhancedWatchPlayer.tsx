@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import TtvLolPlayer from "@/components/player/TtvLolPlayer";
 
 interface EnhancedWatchPlayerProps {
@@ -10,13 +10,34 @@ interface EnhancedWatchPlayerProps {
 
 export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPlayerProps) {
   const [useFallback, setUseFallback] = useState(false);
+  const [useIframePlayer, setUseIframePlayer] = useState(false);
 
   const handleFallback = useCallback(() => {
     console.log("EnhancedWatchPlayer: Switching to fallback player");
     setUseFallback(true);
   }, []);
 
-  if (useFallback) {
+  // Check if user prefers iframe player
+  useEffect(() => {
+    const proxySelection = localStorage.getItem('proxy_selection');
+    // Default to iframe if no selection or if 'iframe' is selected
+    const shouldUseIframe = !proxySelection || proxySelection === 'iframe';
+    setUseIframePlayer(shouldUseIframe);
+
+    // Listen for changes to proxy selection
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'proxy_selection') {
+        const newValue = e.newValue;
+        setUseIframePlayer(!newValue || newValue === 'iframe');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Show iframe player if user selected it OR if proxy player failed
+  if (useFallback || useIframePlayer) {
     const parentDomain = parent || 'localhost';
     const iframeSrc = `https://player.twitch.tv/?channel=${encodeURIComponent(channel)}&parent=${encodeURIComponent(parentDomain)}&muted=false&autoplay=true&theme=dark&controls=true&quality=source`;
 
