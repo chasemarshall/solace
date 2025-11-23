@@ -69,16 +69,6 @@ export const PROXY_ENDPOINTS: ProxyEndpoint[] = [
       `https://lb-eu2.cdn-perfprod.com/playlist/${encodeURIComponent(channel)}.m3u8`,
     priority: 6,
   },
-
-  // Legacy/fallback options
-  {
-    name: 'TTV LOL (Legacy)',
-    baseUrl: 'https://api.ttv.lol',
-    region: 'Global',
-    getPlaylistUrl: (channel: string) =>
-      `https://api.ttv.lol/playlist/${encodeURIComponent(channel)}.m3u8`,
-    priority: 10,
-  },
 ];
 
 /**
@@ -97,7 +87,6 @@ export const PROXY_ALLOWED_HOSTS = [
   'lb-as.cdn-perfprod.com',
   'lb-sa.cdn-perfprod.com',
   'twitch.nadeko.net',
-  'api.ttv.lol', // Legacy
 ];
 
 /**
@@ -107,7 +96,6 @@ export const PROXY_CSP_DOMAINS = [
   'https://*.luminous.dev',
   'https://*.cdn-perfprod.com',
   'https://twitch.nadeko.net',
-  'https://api.ttv.lol',
 ];
 
 /**
