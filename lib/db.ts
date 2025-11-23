@@ -1,4 +1,4 @@
-import { Pool } from '@vercel/postgres';
+import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
