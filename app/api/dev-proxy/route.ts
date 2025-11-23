@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateDevEnvironment } from '@/lib/dev/config';
 import { M3U8AdFilter } from '@/lib/video/m3u8Filter';
+import { isAdRequest, GRAPHQL_AD_PATTERNS } from '@/lib/constants/adPatterns';
 
 export async function GET(request: NextRequest) {
   // Validate dev environment
@@ -12,33 +13,13 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const targetUrl = url.searchParams.get('url');
   const proxyType = url.searchParams.get('type') || 'general';
-  
+
   if (!targetUrl) {
     return new Response('Missing URL parameter', { status: 400 });
   }
 
-  // Enhanced ad domain blocking list (2024-2025)
-  const adDomains = [
-    // Traditional ad servers
-    'googleads.g.doubleclick.net',
-    'googlesyndication.com',
-    'amazon-adsystem.com',
-    'ads.twitch.tv',
-    'twitchads.com',
-    'pubads.g.doubleclick.net',
-    
-    // Twitch-specific ad infrastructure
-    'video-weaver.fra02.hls.ttvnw.net', // Known SSAI endpoints
-    'video-edge-',
-    
-    // Analytics & tracking
-    'analytics.twitch.tv',
-    'spade.twitch.tv',
-    'countess.twitch.tv'
-  ];
-
-  // Check for blocked domains
-  if (adDomains.some(domain => targetUrl.includes(domain))) {
+  // Check for blocked domains using shared ad patterns
+  if (isAdRequest(targetUrl)) {
     console.log('🚫 Network-level ad block:', targetUrl.substring(0, 100));
     return new Response('', { status: 204 });
   }
@@ -123,50 +104,37 @@ async function handleGraphQLProxy(targetUrl: string, request: NextRequest): Prom
       // If not JSON, pass through
       return handleGeneralProxy(targetUrl);
     }
-    
-    // GraphQL ad query patterns (updated for 2025)
-    const adQueryPatterns = [
-      'VideoAdUI',
-      'PlaybackAdAccessToken', 
-      'AdSchedule',
-      'VideoPreviewCard',
-      'AdManager',
-      'CommercialBreak',
-      'VideoPlayerStreamInfoOverlayChannel',
-      'AdBreakActivity',
-      'VideoAdBlock'
-    ];
-    
-    // Filter out ad-related GraphQL queries
-    const filteredOperations = Array.isArray(gqlData) 
+
+    // Filter out ad-related GraphQL queries using shared patterns
+    const filteredOperations = Array.isArray(gqlData)
       ? gqlData.filter((operation: any) => {
           const operationName = operation.operationName || '';
           const query = operation.query || '';
-          
-          const isAdQuery = adQueryPatterns.some(pattern => 
+
+          const isAdQuery = GRAPHQL_AD_PATTERNS.some(pattern =>
             operationName.includes(pattern) || query.includes(pattern)
           );
-          
+
           if (isAdQuery) {
             console.log('🚫 Blocked GraphQL ad query:', operationName);
             return false;
           }
-          
+
           return true;
         })
       : [gqlData].filter((operation: any) => {
           const operationName = operation.operationName || '';
           const query = operation.query || '';
-          
-          const isAdQuery = adQueryPatterns.some(pattern => 
+
+          const isAdQuery = GRAPHQL_AD_PATTERNS.some(pattern =>
             operationName.includes(pattern) || query.includes(pattern)
           );
-          
+
           if (isAdQuery) {
             console.log('🚫 Blocked GraphQL ad query:', operationName);
             return false;
           }
-          
+
           return true;
         });
     
