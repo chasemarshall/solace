@@ -21,7 +21,15 @@ export default function TtvLolPlayer({ channel }: TtvLolPlayerProps) {
     if (!videoRef.current || !channel) return;
 
     // TTV LOL PRO API endpoint - provides ad-free Twitch streams
-    const streamUrl = `https://api.ttv.lol/playlist/${encodeURIComponent(channel)}.m3u8`;
+    // Include required query parameters as per TTV.LOL API spec
+    const params = new URLSearchParams({
+      platform: 'web',
+      allow_source: 'true',
+      allow_audio_only: 'true',
+      fast_bread: 'true',
+      supported_codecs: 'h264,h265,av1'
+    });
+    const streamUrl = `https://api.ttv.lol/playlist/${encodeURIComponent(channel)}.m3u8?${params.toString()}`;
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -30,6 +38,11 @@ export default function TtvLolPlayer({ channel }: TtvLolPlayerProps) {
         maxBufferLength: 60,
         enableWorker: true,
         debug: false,
+        xhrSetup: (xhr, url) => {
+          // Add required headers for TTV.LOL API
+          xhr.setRequestHeader('Referer', 'https://player.twitch.tv');
+          xhr.setRequestHeader('Origin', 'https://player.twitch.tv');
+        },
       });
 
       hlsRef.current = hls;
@@ -82,6 +95,7 @@ export default function TtvLolPlayer({ channel }: TtvLolPlayerProps) {
       };
     } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS support (Safari)
+      // Note: Safari can't set custom headers via video.src, but may still work
       videoRef.current.src = streamUrl;
       setIsLoading(false);
     } else {
