@@ -185,10 +185,10 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
     return (
       <div className={`relative w-full aspect-video bg-black flex items-center justify-center ${isImmersiveMode ? '' : 'rounded-xl'} overflow-hidden shadow-2xl`}>
         <div className="text-center text-white p-8">
-          <div className="text-red-400 text-xl mb-3">⚠ Stream Error</div>
+          <div className="text-red-400 text-xl mb-3">⚠ stream error</div>
           <div className="text-sm opacity-75 mb-4">{loadError}</div>
           <div className="text-xs opacity-50">
-            Channel: {channel}
+            channel: {channel}
           </div>
         </div>
       </div>
@@ -210,13 +210,13 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
           <div className="text-white text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto mb-4"></div>
-            <div className="text-lg font-semibold">Loading Stream</div>
+            <div className="text-lg font-semibold">loading stream</div>
             <div className="text-sm opacity-75 mt-2">
-              {currentProxy ? `${currentProxy.name} (${currentProxy.region})` : 'Finding best proxy...'} • Ad-Free
+              {currentProxy ? `${currentProxy.name.toLowerCase()} (${currentProxy.region.toLowerCase()})` : 'finding best proxy...'} • ad-free
             </div>
             {failoverAttempts > 1 && (
               <div className="text-xs opacity-50 mt-1">
-                Tried {failoverAttempts} {failoverAttempts === 1 ? 'proxy' : 'proxies'}
+                tried {failoverAttempts} {failoverAttempts === 1 ? 'proxy' : 'proxies'}
               </div>
             )}
           </div>
@@ -241,12 +241,12 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
         </div>
       )}
 
-      {/* Ad-free badge with proxy info */}
+      {/* ad-free badge with proxy info */}
       <div className="absolute top-4 left-4 bg-green-600/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg">
         <div className="flex items-center gap-2">
-          <span>Ad-Free</span>
+          <span>ad-free</span>
           {currentProxy && (
-            <span className="opacity-75">• {currentProxy.name}</span>
+            <span className="opacity-75">• {currentProxy.name.toLowerCase()}</span>
           )}
         </div>
       </div>
