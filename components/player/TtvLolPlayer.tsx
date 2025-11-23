@@ -21,7 +21,7 @@ export default function TtvLolPlayer({ channel }: TtvLolPlayerProps) {
     if (!videoRef.current || !channel) return;
 
     // TTV LOL PRO API endpoint - provides ad-free Twitch streams
-    const streamUrl = `https://api.ttv.lol/playlist/${encodeURIComponent(channel)}.m3u8`;
+    const streamUrl = `/api/hls?src=${encodeURIComponent(`https://api.ttv.lol/playlist/${encodeURIComponent(channel)}.m3u8`)}`;
 
     if (Hls.isSupported()) {
       const hls = new Hls({
