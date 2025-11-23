@@ -2,28 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rewriteM3U8 } from '@/lib/video/m3u8';
 import { PROXY_ALLOWED_HOSTS } from '@/lib/twitch/proxyConfig';
 
-export async function GET(request: NextRequest) {
+// Security: Host Allowlist - includes proxy endpoints and Twitch domains
+const ALLOWED_HOSTS = [
+  ...PROXY_ALLOWED_HOSTS,  // Ad-free proxy services
+  'video-weaver',          // Twitch video weaver subdomains
+  'ttvnw.net',            // Twitch CDN
+  'twitch.tv',
+  'usher.ttvnw.net'
+];
+
+function validateRequest(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const src = searchParams.get('src');
 
   if (!src) {
-    return new NextResponse('Missing src parameter', { status: 400 });
+    return { error: new NextResponse('Missing src parameter', { status: 400 }) };
   }
-
-  // Security: Host Allowlist - includes proxy endpoints and Twitch domains
-  const ALLOWED_HOSTS = [
-    ...PROXY_ALLOWED_HOSTS,  // Ad-free proxy services
-    'video-weaver',          // Twitch video weaver subdomains
-    'ttvnw.net',            // Twitch CDN
-    'twitch.tv',
-    'usher.ttvnw.net'
-  ];
 
   let urlObj: URL;
   try {
     urlObj = new URL(src);
   } catch (e) {
-    return new NextResponse('Invalid URL', { status: 400 });
+    return { error: new NextResponse('Invalid URL', { status: 400 }) };
   }
 
   // Check if hostname ends with any of the allowed hosts
@@ -33,13 +33,66 @@ export async function GET(request: NextRequest) {
 
   if (!isAllowed) {
     console.error(`Blocked proxy request to unauthorized host: ${urlObj.hostname}`);
-    return new NextResponse('Host not allowed', { status: 403 });
+    return { error: new NextResponse('Host not allowed', { status: 403 }) };
   }
 
   // Only allow HTTPS URLs
   if (urlObj.protocol !== 'https:') {
-    return new NextResponse('Only HTTPS URLs allowed', { status: 400 });
+    return { error: new NextResponse('Only HTTPS URLs allowed', { status: 400 }) };
   }
+
+  return { src, urlObj };
+}
+
+export async function HEAD(request: NextRequest) {
+  const validation = validateRequest(request);
+
+  if ('error' in validation) {
+    return validation.error;
+  }
+
+  const { src } = validation;
+
+  try {
+    // Test if the proxy endpoint is reachable
+    const response = await fetch(src, {
+      method: 'HEAD',
+      headers: {
+        'Accept': 'application/x-mpegURL, application/vnd.apple.mpegurl, application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.twitch.tv/',
+        'Origin': 'https://www.twitch.tv'
+      },
+    });
+
+    if (!response.ok) {
+      return new NextResponse(null, { status: 502 });
+    }
+
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.apple.mpegurl',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  } catch (error) {
+    console.error('HLS HEAD request error:', error);
+    return new NextResponse(null, { status: 502 });
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const validation = validateRequest(request);
+
+  if ('error' in validation) {
+    return validation.error;
+  }
+
+  const { src } = validation;
 
   try {
     // Fetch upstream HLS manifest with browser-like headers
