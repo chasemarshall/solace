@@ -85,7 +85,7 @@ DEV_MAX_REQUESTS_PER_MINUTE=1000
 
 ## Database Setup
 
-This project uses **PostgreSQL** with **Prisma ORM** for persistent user data. See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for detailed instructions.
+This project uses **PostgreSQL** with **Prisma ORM** for persistent user data. See [DATABASE_SETUP.md](./docs/DATABASE_SETUP.md) for detailed instructions.
 
 ### Quick Setup
 
@@ -355,7 +355,7 @@ npm start
 ### General Issues
 - **API rate limiting**: Twitch API has rate limits - implement caching if hitting limits
 - **HTTPS required for some features**: Storage Access API and some OAuth features require HTTPS
-- **Ad-blocking concerns**: See [IMPROVEMENTS.md](./IMPROVEMENTS.md) for legal/ToS considerations
+- **Ad-blocking concerns**: See [IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) for legal/ToS considerations
 
 ## Contributing & Development
 
@@ -396,10 +396,12 @@ Examples:
 
 ### Key Documentation
 - [CLAUDE.md](./CLAUDE.md) - Project conventions and guidelines
-- [DATABASE_SETUP.md](./DATABASE_SETUP.md) - Database setup instructions
-- [IMPROVEMENTS.md](./IMPROVEMENTS.md) - Comprehensive improvement plan and code analysis
-- [AGENTS.md](./AGENTS.md) - Information about AI agents
-- [CHANGES.md](./CHANGES.md) - Changelog
+- [DATABASE_SETUP.md](./docs/DATABASE_SETUP.md) - Database setup instructions
+- [IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) - Comprehensive improvement plan and code analysis
+- [AGENTS.md](./docs/AGENTS.md) - Information about AI agents
+- [CHANGES.md](./docs/CHANGES.md) - Changelog
+- [PROJECT_VALUE.md](./docs/PROJECT_VALUE.md) - Project value and vision
+- [devplayer.md](./docs/devplayer.md) - Development player documentation
 
 ### Testing
 Currently, the project has zero test coverage. Contributions adding tests are highly welcome!
@@ -425,7 +427,7 @@ This project includes features that may violate Twitch's Terms of Service, parti
 - API access revocation
 - Legal action from Twitch
 
-See [IMPROVEMENTS.md](./IMPROVEMENTS.md) for a comprehensive analysis of ToS violations and legal risks.
+See [IMPROVEMENTS.md](./docs/IMPROVEMENTS.md) for a comprehensive analysis of ToS violations and legal risks.
 
 **Recommendation**: For production use, remove ad-blocking features and use official Twitch Embed API only.
 
