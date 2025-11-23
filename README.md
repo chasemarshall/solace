@@ -1,6 +1,6 @@
-# Solace
+# solace
 
-A modern, feature-rich Twitch streaming platform built with Next.js 14, React 18, TypeScript, and Tailwind CSS. Experience Twitch with enhanced chat, immersive viewing modes, persistent user data, and seamless authentication.
+A modern, feature-rich Twitch streaming platform (frontend) built with Next.js 14, React 18, TypeScript, and Tailwind CSS. Experience Twitch with enhanced chat, immersive viewing modes, persistent user data, and seamless authentication.
 
 **Live Demo**: [solacestreams.vercel.app](https://solacestreams.vercel.app)
 
