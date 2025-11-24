@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect } from "react";
 import TtvLolPlayer from "@/components/player/TtvLolPlayer";
 import SafariNativePlayer from "@/components/player/SafariNativePlayer";
-import { detectBrowser, detectPlatform, detectMediaCapabilities } from "@/lib/utils/browserCompat";
+import { usePlatform } from "@/hooks/usePlatform";
+import { STORAGE_KEYS } from "@/lib/constants/storage";
 
 interface EnhancedWatchPlayerProps {
   channel: string;
@@ -15,6 +16,9 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
   const [useIframePlayer, setUseIframePlayer] = useState(false);
   const [useSafariNative, setUseSafariNative] = useState(false);
 
+  // Use the platform detection hook (runs once on mount)
+  const envInfo = usePlatform();
+
   const handleFallback = useCallback(() => {
     console.log("EnhancedWatchPlayer: Switching to fallback player");
     setUseFallback(true);
@@ -22,31 +26,30 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
 
   // Determine which player to use based on browser, platform, and user preferences
   useEffect(() => {
-    const proxySelection = localStorage.getItem('proxy_selection');
-    const disableNativePlayer = localStorage.getItem('disable_native_player') === 'true';
+    const proxySelection = localStorage.getItem(STORAGE_KEYS.PROXY_SELECTION);
+    const disableNativePlayer = localStorage.getItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER) === 'true';
 
     // Default to iframe if 'iframe' is explicitly selected
     const shouldUseIframe = proxySelection === 'iframe';
     setUseIframePlayer(shouldUseIframe);
 
     // Detect if we should use Safari native player
+    // Use envInfo from hook (already detected once on mount)
     if (!shouldUseIframe && !disableNativePlayer) {
-      const browser = detectBrowser();
-      const platform = detectPlatform();
-      const media = detectMediaCapabilities();
-
       // Use native player for Safari on macOS or iOS (better performance)
-      const shouldUseSafariNativePlayer = media.preferNativeHLS &&
-                                          (platform.isMacOS || platform.isIOS) &&
-                                          browser.isSafari;
+      const shouldUseSafariNativePlayer = envInfo.media.preferNativeHLS &&
+                                          (envInfo.platform.isMacOS || envInfo.platform.isIOS) &&
+                                          envInfo.browser.isSafari;
 
-      console.log('[EnhancedWatchPlayer] Player selection:', {
-        browser: browser.isSafari ? 'Safari' : 'Other',
-        platform: platform.platformName,
-        preferNativeHLS: media.preferNativeHLS,
-        useSafariNative: shouldUseSafariNativePlayer,
-        proxySelection,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[EnhancedWatchPlayer] Player selection:', {
+          browser: envInfo.browser.isSafari ? 'Safari' : 'Other',
+          platform: envInfo.platform.platformName,
+          preferNativeHLS: envInfo.media.preferNativeHLS,
+          useSafariNative: shouldUseSafariNativePlayer,
+          proxySelection,
+        });
+      }
 
       setUseSafariNative(shouldUseSafariNativePlayer);
     } else {
@@ -55,42 +58,36 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
 
     // Listen for changes to proxy selection
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'proxy_selection') {
+      if (e.key === STORAGE_KEYS.PROXY_SELECTION) {
         const newValue = e.newValue;
         setUseIframePlayer(newValue === 'iframe');
 
-        // Re-evaluate Safari native player
+        // Re-evaluate Safari native player using cached envInfo
         if (newValue !== 'iframe') {
-          const browser = detectBrowser();
-          const platform = detectPlatform();
-          const media = detectMediaCapabilities();
-          const disableNative = localStorage.getItem('disable_native_player') === 'true';
+          const disableNative = localStorage.getItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER) === 'true';
 
           setUseSafariNative(
             !disableNative &&
-            media.preferNativeHLS &&
-            (platform.isMacOS || platform.isIOS) &&
-            browser.isSafari
+            envInfo.media.preferNativeHLS &&
+            (envInfo.platform.isMacOS || envInfo.platform.isIOS) &&
+            envInfo.browser.isSafari
           );
         } else {
           setUseSafariNative(false);
         }
-      } else if (e.key === 'disable_native_player') {
+      } else if (e.key === STORAGE_KEYS.DISABLE_NATIVE_PLAYER) {
         const disabled = e.newValue === 'true';
         if (disabled) {
           setUseSafariNative(false);
         } else {
-          // Re-check if we should use native player
-          const browser = detectBrowser();
-          const platform = detectPlatform();
-          const media = detectMediaCapabilities();
-          const proxyPref = localStorage.getItem('proxy_selection');
+          // Re-check if we should use native player using cached envInfo
+          const proxyPref = localStorage.getItem(STORAGE_KEYS.PROXY_SELECTION);
 
           setUseSafariNative(
             proxyPref !== 'iframe' &&
-            media.preferNativeHLS &&
-            (platform.isMacOS || platform.isIOS) &&
-            browser.isSafari
+            envInfo.media.preferNativeHLS &&
+            (envInfo.platform.isMacOS || envInfo.platform.isIOS) &&
+            envInfo.browser.isSafari
           );
         }
       }
@@ -98,7 +95,7 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [envInfo]);
 
   // Show iframe player if user selected it OR if proxy player failed
   if (useFallback || useIframePlayer) {

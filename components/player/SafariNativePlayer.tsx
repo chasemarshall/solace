@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useImmersive } from '@/contexts/ImmersiveContext';
-import { findWorkingProxy } from '@/lib/twitch/proxyFailover';
+import { findWorkingProxy, type ProxyEndpoint } from '@/lib/twitch/proxyFailover';
 import { detectMediaCapabilities } from '@/lib/utils/browserCompat';
+import { STORAGE_KEYS } from '@/lib/constants/storage';
 
 interface SafariNativePlayerProps {
   channel: string;
@@ -22,7 +23,7 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
   const videoRef = useRef<SafariVideoElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [currentProxy, setCurrentProxy] = useState<any>(null);
+  const [currentProxy, setCurrentProxy] = useState<ProxyEndpoint | null>(null);
   const [isPiPSupported, setIsPiPSupported] = useState(false);
   const [isAirPlaySupported, setIsAirPlaySupported] = useState(false);
   const [preferredProxy, setPreferredProxy] = useState<string>('auto');
@@ -30,13 +31,13 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
 
   // Load proxy preference
   useEffect(() => {
-    const savedProxy = localStorage.getItem('proxy_selection');
+    const savedProxy = localStorage.getItem(STORAGE_KEYS.PROXY_SELECTION);
     if (savedProxy) {
       setPreferredProxy(savedProxy);
     }
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'proxy_selection' && e.newValue) {
+      if (e.key === STORAGE_KEYS.PROXY_SELECTION && e.newValue) {
         setPreferredProxy(e.newValue);
       }
     };
@@ -53,11 +54,13 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
     setIsPiPSupported(capabilities.supportsWebkitPiP);
     setIsAirPlaySupported(capabilities.supportsAirPlay);
 
-    console.log('[SafariNativePlayer] Capabilities:', {
-      webkitPiP: capabilities.supportsWebkitPiP,
-      airPlay: capabilities.supportsAirPlay,
-      nativeHLS: capabilities.supportsNativeHLS,
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[SafariNativePlayer] Capabilities:', {
+        webkitPiP: capabilities.supportsWebkitPiP,
+        airPlay: capabilities.supportsAirPlay,
+        nativeHLS: capabilities.supportsNativeHLS,
+      });
+    }
   }, []);
 
   // Initialize native HLS player
@@ -65,13 +68,35 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
     if (!videoRef.current || !channel) return;
 
     let isMounted = true;
+    let videoElement: SafariVideoElement | null = null;
+
+    const handleCanPlay = () => {
+      if (isMounted) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[SafariNativePlayer] Stream ready for playback');
+        }
+        setIsLoading(false);
+      }
+    };
+
+    const handleError = (e: Event) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[SafariNativePlayer] Playback error:', e);
+      }
+      if (isMounted) {
+        setLoadError('Playback failed');
+        onError?.();
+      }
+    };
 
     const initializePlayer = async () => {
       try {
         setIsLoading(true);
         setLoadError(null);
 
-        console.log('[SafariNativePlayer] Initializing for channel:', channel);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[SafariNativePlayer] Initializing for channel:', channel);
+        }
 
         // Find working proxy
         const result = await findWorkingProxy(channel, 3, preferredProxy);
@@ -79,55 +104,44 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
         if (!isMounted) return;
 
         if (!result.success || !result.streamUrl) {
-          console.error('[SafariNativePlayer] All proxies failed');
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[SafariNativePlayer] All proxies failed');
+          }
           setLoadError('All proxy servers unavailable');
           onError?.();
           return;
         }
 
-        setCurrentProxy(result.proxy);
-        console.log(`[SafariNativePlayer] Using ${result.proxy!.name} with native HLS`);
+        setCurrentProxy(result.proxy || null);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[SafariNativePlayer] Using ${result.proxy!.name} with native HLS`);
+        }
 
         // Use native HLS playback - Safari handles this internally via AVPlayer
-        if (videoRef.current) {
-          videoRef.current.src = result.streamUrl;
+        if (videoRef.current && isMounted) {
+          videoElement = videoRef.current;
+          videoElement.src = result.streamUrl;
 
-          // Safari native player doesn't expose manifest loaded event
-          // We'll rely on canplay event instead
-          const handleCanPlay = () => {
-            if (isMounted) {
-              console.log('[SafariNativePlayer] Stream ready for playback');
-              setIsLoading(false);
-            }
-          };
-
-          const handleError = (e: Event) => {
-            console.error('[SafariNativePlayer] Playback error:', e);
-            if (isMounted) {
-              setLoadError('Playback failed');
-              onError?.();
-            }
-          };
-
-          videoRef.current.addEventListener('canplay', handleCanPlay);
-          videoRef.current.addEventListener('error', handleError);
+          videoElement.addEventListener('canplay', handleCanPlay);
+          videoElement.addEventListener('error', handleError);
 
           // Attempt to play (may be blocked by autoplay policy)
-          videoRef.current.play().catch((err) => {
-            console.warn('[SafariNativePlayer] Autoplay prevented:', err);
-            // This is expected and user can click play
-          });
-
-          return () => {
-            if (videoRef.current) {
-              videoRef.current.removeEventListener('canplay', handleCanPlay);
-              videoRef.current.removeEventListener('error', handleError);
+          videoElement.play().catch((err) => {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[SafariNativePlayer] Autoplay prevented:', err);
             }
-          };
+            // This is expected and user can click play
+            // Set loading to false so user knows they can interact
+            if (isMounted) {
+              setIsLoading(false);
+            }
+          });
         }
       } catch (error) {
         if (!isMounted) return;
-        console.error('[SafariNativePlayer] Initialization error:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[SafariNativePlayer] Initialization error:', error);
+        }
         setLoadError(error instanceof Error ? error.message : 'Failed to initialize player');
         onError?.();
       }
@@ -137,6 +151,14 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
 
     return () => {
       isMounted = false;
+      if (videoElement) {
+        videoElement.removeEventListener('canplay', handleCanPlay);
+        videoElement.removeEventListener('error', handleError);
+        // Clean up video resources
+        videoElement.pause();
+        videoElement.removeAttribute('src');
+        videoElement.load();
+      }
     };
   }, [channel, preferredProxy, onError]);
 
