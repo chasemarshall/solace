@@ -11,6 +11,9 @@ import {
   type ProxyEndpoint,
 } from './proxyConfig';
 
+// Re-export ProxyEndpoint type for consumers
+export type { ProxyEndpoint };
+
 export interface ProxyTestResult {
   proxy: ProxyEndpoint;
   success: boolean;

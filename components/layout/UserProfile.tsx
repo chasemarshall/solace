@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { User, Settings, LogOut, Sun, Moon, Wifi } from "lucide-react";
 import { PROXY_ENDPOINTS } from "@/lib/twitch/proxyConfig";
+import { STORAGE_KEYS } from "@/lib/constants/storage";
 
 interface UserProfileProps {
   onAuthChange?: (isAuthenticated: boolean, authData?: any) => void;
@@ -17,6 +18,7 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const [ffzEnabled, setFfzEnabled] = useState(true);
   const [seventvEnabled, setSeventvEnabled] = useState(true);
   const [selectedProxy, setSelectedProxy] = useState<string>('auto');
+  const [useNativePlayer, setUseNativePlayer] = useState(true);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -28,22 +30,24 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
 
   useEffect(() => {
     // Load preferences
-    const savedShowBadges = localStorage.getItem('chat_show_badges');
-    const savedTheme = localStorage.getItem('theme');
-    const savedBttv = localStorage.getItem('emotes_bttv');
-    const savedFfz = localStorage.getItem('emotes_ffz');
-    const savedSeventv = localStorage.getItem('emotes_7tv');
-    const savedProxy = localStorage.getItem('proxy_selection');
+    const savedShowBadges = localStorage.getItem(STORAGE_KEYS.CHAT_SHOW_BADGES);
+    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
+    const savedBttv = localStorage.getItem(STORAGE_KEYS.EMOTES_BTTV);
+    const savedFfz = localStorage.getItem(STORAGE_KEYS.EMOTES_FFZ);
+    const savedSeventv = localStorage.getItem(STORAGE_KEYS.EMOTES_7TV);
+    const savedProxy = localStorage.getItem(STORAGE_KEYS.PROXY_SELECTION);
+    const savedNativePlayer = localStorage.getItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER);
 
     setShowBadges(savedShowBadges !== 'false');
     setIsDarkMode(savedTheme !== 'light');
     setBttvEnabled(savedBttv !== 'false');
     setFfzEnabled(savedFfz !== 'false');
     setSeventvEnabled(savedSeventv !== 'false');
+    setUseNativePlayer(savedNativePlayer !== 'true'); // Inverted logic: disable_native_player
 
     // Default to iframe player if no preference set
     if (!savedProxy) {
-      localStorage.setItem('proxy_selection', 'iframe');
+      localStorage.setItem(STORAGE_KEYS.PROXY_SELECTION, 'iframe');
       setSelectedProxy('iframe');
     } else {
       setSelectedProxy(savedProxy);
@@ -64,11 +68,11 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const toggleBadges = () => {
     const newShowBadges = !showBadges;
     setShowBadges(newShowBadges);
-    localStorage.setItem('chat_show_badges', newShowBadges.toString());
-    
+    localStorage.setItem(STORAGE_KEYS.CHAT_SHOW_BADGES, newShowBadges.toString());
+
     // Trigger storage event for other components
     window.dispatchEvent(new StorageEvent('storage', {
-      key: 'chat_show_badges',
+      key: STORAGE_KEYS.CHAT_SHOW_BADGES,
       newValue: newShowBadges.toString(),
     }));
   };
@@ -76,7 +80,7 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const toggleTheme = () => {
     const newTheme = isDarkMode ? 'light' : 'dark';
     setIsDarkMode(!isDarkMode);
-    localStorage.setItem('theme', newTheme);
+    localStorage.setItem(STORAGE_KEYS.THEME, newTheme);
     
     // Apply theme to document
     if (newTheme === 'light') {
@@ -91,10 +95,10 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const toggleBttv = () => {
     const newEnabled = !bttvEnabled;
     setBttvEnabled(newEnabled);
-    localStorage.setItem('emotes_bttv', newEnabled.toString());
-    
+    localStorage.setItem(STORAGE_KEYS.EMOTES_BTTV, newEnabled.toString());
+
     window.dispatchEvent(new StorageEvent('storage', {
-      key: 'emotes_bttv',
+      key: STORAGE_KEYS.EMOTES_BTTV,
       newValue: newEnabled.toString(),
     }));
   };
@@ -102,10 +106,10 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const toggleFfz = () => {
     const newEnabled = !ffzEnabled;
     setFfzEnabled(newEnabled);
-    localStorage.setItem('emotes_ffz', newEnabled.toString());
-    
+    localStorage.setItem(STORAGE_KEYS.EMOTES_FFZ, newEnabled.toString());
+
     window.dispatchEvent(new StorageEvent('storage', {
-      key: 'emotes_ffz',
+      key: STORAGE_KEYS.EMOTES_FFZ,
       newValue: newEnabled.toString(),
     }));
   };
@@ -113,22 +117,34 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const toggleSeventv = () => {
     const newEnabled = !seventvEnabled;
     setSeventvEnabled(newEnabled);
-    localStorage.setItem('emotes_7tv', newEnabled.toString());
+    localStorage.setItem(STORAGE_KEYS.EMOTES_7TV, newEnabled.toString());
 
     window.dispatchEvent(new StorageEvent('storage', {
-      key: 'emotes_7tv',
+      key: STORAGE_KEYS.EMOTES_7TV,
       newValue: newEnabled.toString(),
     }));
   };
 
   const handleProxyChange = (proxyId: string) => {
     setSelectedProxy(proxyId);
-    localStorage.setItem('proxy_selection', proxyId);
+    localStorage.setItem(STORAGE_KEYS.PROXY_SELECTION, proxyId);
 
     // Trigger storage event for other components
     window.dispatchEvent(new StorageEvent('storage', {
-      key: 'proxy_selection',
+      key: STORAGE_KEYS.PROXY_SELECTION,
       newValue: proxyId,
+    }));
+  };
+
+  const toggleNativePlayer = () => {
+    const newEnabled = !useNativePlayer;
+    setUseNativePlayer(newEnabled);
+    // Inverted logic: store "disable_native_player"
+    localStorage.setItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER, (!newEnabled).toString());
+
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: STORAGE_KEYS.DISABLE_NATIVE_PLAYER,
+      newValue: (!newEnabled).toString(),
     }));
   };
 
@@ -318,6 +334,35 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
               </div>
             </div>
 
+            {/* Native Player Toggle (Safari only) */}
+            {selectedProxy !== 'iframe' && (
+              <button
+                onClick={toggleNativePlayer}
+                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center justify-between border-t border-white/5"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                  </svg>
+                  Native Player (Safari)
+                </span>
+                <div className={`w-4 h-4 rounded border ${useNativePlayer ? 'bg-purple-600 border-purple-600' : 'border-white/30'} flex items-center justify-center`}>
+                  {useNativePlayer && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+            )}
+            {selectedProxy !== 'iframe' && (
+              <div className="px-3 py-2 text-xs text-text-muted opacity-75">
+                {useNativePlayer
+                  ? '⚡ Optimized for Safari/macOS (better performance)'
+                  : '🎛️ Using HLS.js player (manual quality control)'}
+              </div>
+            )}
+
             <button
               onClick={handleLogout}
               className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2 border-t border-white/10 mt-1"
@@ -346,10 +391,10 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
   const handleLogout = () => {
     setAuthData(null);
     onAuthChange?.(false);
-    localStorage.removeItem('twitch_auth');
+    localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
     // Clear any chat tokens
-    localStorage.removeItem('twitch_username');
-    localStorage.removeItem('twitch_oauth');
+    localStorage.removeItem(STORAGE_KEYS.TWITCH_USERNAME);
+    localStorage.removeItem(STORAGE_KEYS.TWITCH_OAUTH);
   };
 
   useEffect(() => {
@@ -368,18 +413,18 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
             const decodedAuthData = JSON.parse(cookieValue);
             setAuthData(decodedAuthData);
             onAuthChange?.(true, decodedAuthData);
-            localStorage.setItem('twitch_auth', JSON.stringify(decodedAuthData));
-            
+            localStorage.setItem(STORAGE_KEYS.TWITCH_AUTH, JSON.stringify(decodedAuthData));
+
             // Store basic user info for chat (tokens are server-side only now)
-            localStorage.setItem('twitch_username', decodedAuthData.user.login);
-            
+            localStorage.setItem(STORAGE_KEYS.TWITCH_USERNAME, decodedAuthData.user.login);
+
             // Fetch chat token from secure API endpoint
             fetch('/api/auth/chat-token')
               .then(res => res.json())
               .then(data => {
                 console.log('Chat token response:', data);
                 if (data.oauth) {
-                  localStorage.setItem('twitch_oauth', data.oauth);
+                  localStorage.setItem(STORAGE_KEYS.TWITCH_OAUTH, data.oauth);
                   console.log('Chat token stored successfully');
                 }
               })
@@ -403,7 +448,7 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
     };
 
     // Check for stored auth data
-    const storedAuth = localStorage.getItem('twitch_auth');
+    const storedAuth = localStorage.getItem(STORAGE_KEYS.TWITCH_AUTH);
     if (storedAuth) {
       try {
         const parsedAuth = JSON.parse(storedAuth);
@@ -412,25 +457,25 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
           setAuthData(parsedAuth);
           onAuthChange?.(true, parsedAuth);
           // Set chat credentials
-          localStorage.setItem('twitch_username', parsedAuth.user.login);
-          
+          localStorage.setItem(STORAGE_KEYS.TWITCH_USERNAME, parsedAuth.user.login);
+
           // Fetch chat token from secure API endpoint
           fetch('/api/auth/chat-token')
             .then(res => res.json())
             .then(data => {
               console.log('Chat token response (stored auth):', data);
               if (data.oauth) {
-                localStorage.setItem('twitch_oauth', data.oauth);
+                localStorage.setItem(STORAGE_KEYS.TWITCH_OAUTH, data.oauth);
                 console.log('Chat token stored successfully (stored auth)');
               }
             })
             .catch(err => console.error('Failed to fetch chat token (stored auth):', err));
         } else {
           // Token expired, clear it
-          localStorage.removeItem('twitch_auth');
+          localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
         }
       } catch (e) {
-        localStorage.removeItem('twitch_auth');
+        localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
       }
     }
 
@@ -439,7 +484,7 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
     
     // Listen for storage changes (auth in other tabs)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'twitch_auth') {
+      if (e.key === STORAGE_KEYS.TWITCH_AUTH) {
         if (e.newValue) {
           try {
             const parsedAuth = JSON.parse(e.newValue);
