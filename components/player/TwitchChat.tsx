@@ -84,6 +84,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   
   const clientRef = useRef<any>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const scrollPendingRef = useRef<boolean>(false);
   // Removed smooth scroll animation refs since we always auto-scroll
   // Get credentials from localStorage (set by UserProfile after OAuth)
   const [username, setUsername] = useState<string | undefined>();
@@ -634,14 +635,19 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
   // Enhanced auto-scroll with requestAnimationFrame for reliability during rapid messages
   const scrollToBottom = useCallback(() => {
-    if (!listRef.current || scrollPaused) return;
+    if (!listRef.current || scrollPaused) {
+      scrollPendingRef.current = false;
+      return;
+    }
 
     const el = listRef.current;
-    const targetScrollTop = el.scrollHeight;
 
-    // Use requestAnimationFrame for guaranteed execution
+    // Use requestAnimationFrame for guaranteed execution after DOM updates
     requestAnimationFrame(() => {
-      el.scrollTop = targetScrollTop;
+      if (!scrollPaused && el) {
+        el.scrollTop = el.scrollHeight;
+      }
+      scrollPendingRef.current = false;
     });
   }, [scrollPaused]);
 
@@ -649,12 +655,12 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   useEffect(() => {
     if (scrollPaused) return;
 
-    // Debounce rapid message updates to prevent excessive scrolling
-    const timeoutId = setTimeout(() => {
+    // Only schedule a new scroll if one isn't already pending
+    // This prevents canceling pending scrolls during rapid message influx
+    if (!scrollPendingRef.current) {
+      scrollPendingRef.current = true;
       scrollToBottom();
-    }, 0); // Next tick to batch rapid updates
-
-    return () => clearTimeout(timeoutId);
+    }
   }, [messages.length, scrollToBottom, scrollPaused]);
 
   // Enhanced scroll detection with better accuracy during rapid messages
