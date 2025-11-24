@@ -28,7 +28,7 @@ export default function FavoriteButton({ channel }: { channel: string }) {
     <button
       onClick={handleToggle}
       disabled={isLoading}
-      className={`flex items-center justify-center px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-lg backdrop-blur-sm transition-all duration-200 text-text hover:text-white group ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`flex items-center justify-center px-3 py-2 bg-surface/80 hover:bg-surface border border-white/10 hover:border-white/20 rounded-xl backdrop-blur-sm transition-all duration-200 text-text hover:text-white group ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
       title={isLoading ? "Loading..." : (favorited ? "Remove from favorites" : "Add to favorites")}
     >
       {isLoading ? (

@@ -468,7 +468,7 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
     <button
       onClick={handleLogin}
       disabled={loading}
-      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/10 bg-surface hover:bg-white/5 transition-colors disabled:opacity-50"
+      className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-surface hover:bg-white/5 transition-colors disabled:opacity-50"
     >
       <User className="w-4 h-4" />
       <span className="text-sm">{loading ? "connecting..." : "sign in"}</span>
