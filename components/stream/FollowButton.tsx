@@ -23,7 +23,7 @@ export default function FollowButton({ channel, displayName, className = "" }: F
   return (
     <button
       onClick={handleToggle}
-      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+      className={`px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 ${
         following
           ? 'bg-gray-600 hover:bg-gray-700 text-white'
           : 'bg-purple-600 hover:bg-purple-700 text-white'

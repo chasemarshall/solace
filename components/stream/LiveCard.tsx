@@ -62,7 +62,7 @@ export default function LiveCard({ s }: { s: Stream }) {
         {/* Star button - appears on hover */}
         <button
           onClick={handleFavorite}
-          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-lg backdrop-blur-sm"
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-xl backdrop-blur-sm"
           title={favorited ? "Remove from favorites" : "Add to favorites"}
         >
           <svg className="w-4 h-4" fill={favorited ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
