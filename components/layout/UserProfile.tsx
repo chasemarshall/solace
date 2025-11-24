@@ -176,8 +176,8 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
       </button>
 
       {isOpen && dropdownPosition && mounted && createPortal(
-        <div 
-          className="fixed w-56 bg-surface border border-white/10 rounded-lg shadow-lg backdrop-blur-sm max-h-96 overflow-y-auto"
+        <div
+          className="fixed w-56 bg-surface border border-white/10 rounded-xl shadow-lg backdrop-blur-sm max-h-96 overflow-y-auto"
           style={{
             top: `${dropdownPosition.top}px`,
             right: `${dropdownPosition.right}px`,
