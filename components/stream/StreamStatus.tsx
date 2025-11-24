@@ -64,7 +64,7 @@ export default function StreamStatus({ channel }: StreamStatusProps) {
   const isLive = streamData?.liveStream !== null;
 
   return (
-    <div className="flex items-center gap-2 text-sm text-text-muted mt-1">
+    <div className="hidden md:flex items-center gap-2 text-sm text-text-muted mt-1">
       <div className={`h-2 w-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`}></div>
       <span>{isLive ? 'live' : 'offline'}</span>
     </div>
