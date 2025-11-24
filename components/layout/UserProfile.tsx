@@ -17,6 +17,7 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const [ffzEnabled, setFfzEnabled] = useState(true);
   const [seventvEnabled, setSeventvEnabled] = useState(true);
   const [selectedProxy, setSelectedProxy] = useState<string>('auto');
+  const [useNativePlayer, setUseNativePlayer] = useState(true);
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; right: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -34,12 +35,14 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     const savedFfz = localStorage.getItem('emotes_ffz');
     const savedSeventv = localStorage.getItem('emotes_7tv');
     const savedProxy = localStorage.getItem('proxy_selection');
+    const savedNativePlayer = localStorage.getItem('disable_native_player');
 
     setShowBadges(savedShowBadges !== 'false');
     setIsDarkMode(savedTheme !== 'light');
     setBttvEnabled(savedBttv !== 'false');
     setFfzEnabled(savedFfz !== 'false');
     setSeventvEnabled(savedSeventv !== 'false');
+    setUseNativePlayer(savedNativePlayer !== 'true'); // Inverted logic: disable_native_player
 
     // Default to iframe player if no preference set
     if (!savedProxy) {
@@ -129,6 +132,18 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     window.dispatchEvent(new StorageEvent('storage', {
       key: 'proxy_selection',
       newValue: proxyId,
+    }));
+  };
+
+  const toggleNativePlayer = () => {
+    const newEnabled = !useNativePlayer;
+    setUseNativePlayer(newEnabled);
+    // Inverted logic: store "disable_native_player"
+    localStorage.setItem('disable_native_player', (!newEnabled).toString());
+
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'disable_native_player',
+      newValue: (!newEnabled).toString(),
     }));
   };
 
@@ -317,6 +332,35 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
                     : 'Using selected proxy with auto-fallback'}
               </div>
             </div>
+
+            {/* Native Player Toggle (Safari only) */}
+            {selectedProxy !== 'iframe' && (
+              <button
+                onClick={toggleNativePlayer}
+                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-white/5 flex items-center justify-between border-t border-white/5"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                  </svg>
+                  Native Player (Safari)
+                </span>
+                <div className={`w-4 h-4 rounded border ${useNativePlayer ? 'bg-purple-600 border-purple-600' : 'border-white/30'} flex items-center justify-center`}>
+                  {useNativePlayer && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+            )}
+            {selectedProxy !== 'iframe' && (
+              <div className="px-3 py-2 text-xs text-text-muted opacity-75">
+                {useNativePlayer
+                  ? '⚡ Optimized for Safari/macOS (better performance)'
+                  : '🎛️ Using HLS.js player (manual quality control)'}
+              </div>
+            )}
 
             <button
               onClick={handleLogout}

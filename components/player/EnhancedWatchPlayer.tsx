@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import TtvLolPlayer from "@/components/player/TtvLolPlayer";
+import SafariNativePlayer from "@/components/player/SafariNativePlayer";
+import { detectBrowser, detectPlatform, detectMediaCapabilities } from "@/lib/utils/browserCompat";
 
 interface EnhancedWatchPlayerProps {
   channel: string;
@@ -11,24 +13,86 @@ interface EnhancedWatchPlayerProps {
 export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPlayerProps) {
   const [useFallback, setUseFallback] = useState(false);
   const [useIframePlayer, setUseIframePlayer] = useState(false);
+  const [useSafariNative, setUseSafariNative] = useState(false);
 
   const handleFallback = useCallback(() => {
     console.log("EnhancedWatchPlayer: Switching to fallback player");
     setUseFallback(true);
   }, []);
 
-  // Check if user prefers iframe player
+  // Determine which player to use based on browser, platform, and user preferences
   useEffect(() => {
     const proxySelection = localStorage.getItem('proxy_selection');
-    // Default to iframe if no selection or if 'iframe' is selected
-    const shouldUseIframe = !proxySelection || proxySelection === 'iframe';
+    const disableNativePlayer = localStorage.getItem('disable_native_player') === 'true';
+
+    // Default to iframe if 'iframe' is explicitly selected
+    const shouldUseIframe = proxySelection === 'iframe';
     setUseIframePlayer(shouldUseIframe);
+
+    // Detect if we should use Safari native player
+    if (!shouldUseIframe && !disableNativePlayer) {
+      const browser = detectBrowser();
+      const platform = detectPlatform();
+      const media = detectMediaCapabilities();
+
+      // Use native player for Safari on macOS or iOS (better performance)
+      const shouldUseSafariNativePlayer = media.preferNativeHLS &&
+                                          (platform.isMacOS || platform.isIOS) &&
+                                          browser.isSafari;
+
+      console.log('[EnhancedWatchPlayer] Player selection:', {
+        browser: browser.isSafari ? 'Safari' : 'Other',
+        platform: platform.platformName,
+        preferNativeHLS: media.preferNativeHLS,
+        useSafariNative: shouldUseSafariNativePlayer,
+        proxySelection,
+      });
+
+      setUseSafariNative(shouldUseSafariNativePlayer);
+    } else {
+      setUseSafariNative(false);
+    }
 
     // Listen for changes to proxy selection
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'proxy_selection') {
         const newValue = e.newValue;
-        setUseIframePlayer(!newValue || newValue === 'iframe');
+        setUseIframePlayer(newValue === 'iframe');
+
+        // Re-evaluate Safari native player
+        if (newValue !== 'iframe') {
+          const browser = detectBrowser();
+          const platform = detectPlatform();
+          const media = detectMediaCapabilities();
+          const disableNative = localStorage.getItem('disable_native_player') === 'true';
+
+          setUseSafariNative(
+            !disableNative &&
+            media.preferNativeHLS &&
+            (platform.isMacOS || platform.isIOS) &&
+            browser.isSafari
+          );
+        } else {
+          setUseSafariNative(false);
+        }
+      } else if (e.key === 'disable_native_player') {
+        const disabled = e.newValue === 'true';
+        if (disabled) {
+          setUseSafariNative(false);
+        } else {
+          // Re-check if we should use native player
+          const browser = detectBrowser();
+          const platform = detectPlatform();
+          const media = detectMediaCapabilities();
+          const proxyPref = localStorage.getItem('proxy_selection');
+
+          setUseSafariNative(
+            proxyPref !== 'iframe' &&
+            media.preferNativeHLS &&
+            (platform.isMacOS || platform.isIOS) &&
+            browser.isSafari
+          );
+        }
       }
     };
 
@@ -57,6 +121,16 @@ export default function EnhancedWatchPlayer({ channel, parent }: EnhancedWatchPl
     );
   }
 
+  // Safari Native Player - Optimized for macOS/iOS
+  if (useSafariNative) {
+    return (
+      <div className="relative w-full">
+        <SafariNativePlayer channel={channel} onError={handleFallback} />
+      </div>
+    );
+  }
+
+  // Default: TTV LOL PRO Player - Ad-Free Twitch Streams
   return (
     <div className="relative w-full">
       {/* TTV LOL PRO Player - Ad-Free Twitch Streams */}
