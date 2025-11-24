@@ -1079,8 +1079,8 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            className="w-full rounded-lg bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            placeholder="type here."
+            className="w-full rounded-xl bg-bg border border-white/20 px-4 py-2.5 text-sm text-white outline-none ring-purple-500/50 focus:ring-2 focus:border-purple-500/50 placeholder:text-text-muted transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            placeholder="type here…"
             maxLength={500}
           />
         </form>
