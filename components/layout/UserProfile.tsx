@@ -36,14 +36,30 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
     const savedFfz = localStorage.getItem(STORAGE_KEYS.EMOTES_FFZ);
     const savedSeventv = localStorage.getItem(STORAGE_KEYS.EMOTES_7TV);
     const savedProxy = localStorage.getItem(STORAGE_KEYS.PROXY_SELECTION);
-    const savedNativePlayer = localStorage.getItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER);
+
+    // Migration: Check for old DISABLE_NATIVE_PLAYER key and migrate to USE_NATIVE_PLAYER
+    const legacyDisableKey = localStorage.getItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER);
+    const newUseKey = localStorage.getItem(STORAGE_KEYS.USE_NATIVE_PLAYER);
+
+    let useNativePlayerValue = true; // Default to true
+
+    if (newUseKey !== null) {
+      // New key exists, use it
+      useNativePlayerValue = newUseKey === 'true';
+    } else if (legacyDisableKey !== null) {
+      // Migrate from old key (inverted logic)
+      useNativePlayerValue = legacyDisableKey !== 'true';
+      // Save to new key and remove old key
+      localStorage.setItem(STORAGE_KEYS.USE_NATIVE_PLAYER, useNativePlayerValue.toString());
+      localStorage.removeItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER);
+    }
 
     setShowBadges(savedShowBadges !== 'false');
     setIsDarkMode(savedTheme !== 'light');
     setBttvEnabled(savedBttv !== 'false');
     setFfzEnabled(savedFfz !== 'false');
     setSeventvEnabled(savedSeventv !== 'false');
-    setUseNativePlayer(savedNativePlayer !== 'true'); // Inverted logic: disable_native_player
+    setUseNativePlayer(useNativePlayerValue);
 
     // Default to iframe player if no preference set
     if (!savedProxy) {
@@ -139,12 +155,12 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   const toggleNativePlayer = () => {
     const newEnabled = !useNativePlayer;
     setUseNativePlayer(newEnabled);
-    // Inverted logic: store "disable_native_player"
-    localStorage.setItem(STORAGE_KEYS.DISABLE_NATIVE_PLAYER, (!newEnabled).toString());
+    // Store the preference directly (no more inverted logic!)
+    localStorage.setItem(STORAGE_KEYS.USE_NATIVE_PLAYER, newEnabled.toString());
 
     window.dispatchEvent(new StorageEvent('storage', {
-      key: STORAGE_KEYS.DISABLE_NATIVE_PLAYER,
-      newValue: (!newEnabled).toString(),
+      key: STORAGE_KEYS.USE_NATIVE_PLAYER,
+      newValue: newEnabled.toString(),
     }));
   };
 

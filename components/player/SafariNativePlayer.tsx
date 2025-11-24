@@ -3,12 +3,13 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useImmersive } from '@/contexts/ImmersiveContext';
 import { findWorkingProxy, type ProxyEndpoint } from '@/lib/twitch/proxyFailover';
-import { detectMediaCapabilities } from '@/lib/utils/browserCompat';
+import { type MediaCapabilities } from '@/lib/utils/browserCompat';
 import { STORAGE_KEYS } from '@/lib/constants/storage';
 
 interface SafariNativePlayerProps {
   channel: string;
   onError?: () => void;
+  capabilities?: MediaCapabilities;
 }
 
 // Extend HTMLVideoElement for Safari-specific APIs
@@ -19,8 +20,23 @@ interface SafariVideoElement extends HTMLVideoElement {
   webkitShowPlaybackTargetPicker?: () => void;
 }
 
-export default function SafariNativePlayer({ channel, onError }: SafariNativePlayerProps) {
+// Validate stream URL to prevent XSS risks
+function isValidStreamUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    // Only allow HTTPS URLs from expected domains
+    return parsed.protocol === 'https:' &&
+           (parsed.hostname.endsWith('.ttvnw.net') ||
+            parsed.hostname.endsWith('.twitch.tv') ||
+            parsed.hostname.includes('ttv.lol'));
+  } catch {
+    return false;
+  }
+}
+
+export default function SafariNativePlayer({ channel, onError, capabilities }: SafariNativePlayerProps) {
   const videoRef = useRef<SafariVideoElement>(null);
+  const onErrorRef = useRef(onError);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [currentProxy, setCurrentProxy] = useState<ProxyEndpoint | null>(null);
@@ -28,6 +44,11 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
   const [isAirPlaySupported, setIsAirPlaySupported] = useState(false);
   const [preferredProxy, setPreferredProxy] = useState<string>('auto');
   const { isImmersiveMode } = useImmersive();
+
+  // Keep onError ref up to date without causing re-renders
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   // Load proxy preference
   useEffect(() => {
@@ -46,22 +67,22 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Detect Safari-specific capabilities
+  // Detect Safari-specific capabilities (use passed capabilities if available)
   useEffect(() => {
-    if (!videoRef.current) return;
+    if (capabilities) {
+      // Use capabilities passed from parent (avoids redundant detection)
+      setIsPiPSupported(capabilities.supportsWebkitPiP);
+      setIsAirPlaySupported(capabilities.supportsAirPlay);
 
-    const capabilities = detectMediaCapabilities();
-    setIsPiPSupported(capabilities.supportsWebkitPiP);
-    setIsAirPlaySupported(capabilities.supportsAirPlay);
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[SafariNativePlayer] Capabilities:', {
-        webkitPiP: capabilities.supportsWebkitPiP,
-        airPlay: capabilities.supportsAirPlay,
-        nativeHLS: capabilities.supportsNativeHLS,
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[SafariNativePlayer] Using passed capabilities:', {
+          webkitPiP: capabilities.supportsWebkitPiP,
+          airPlay: capabilities.supportsAirPlay,
+          nativeHLS: capabilities.supportsNativeHLS,
+        });
+      }
     }
-  }, []);
+  }, [capabilities]);
 
   // Initialize native HLS player
   useEffect(() => {
@@ -85,7 +106,7 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
       }
       if (isMounted) {
         setLoadError('Playback failed');
-        onError?.();
+        onErrorRef.current?.();
       }
     };
 
@@ -108,7 +129,17 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
             console.error('[SafariNativePlayer] All proxies failed');
           }
           setLoadError('All proxy servers unavailable');
-          onError?.();
+          onErrorRef.current?.();
+          return;
+        }
+
+        // Validate stream URL before using it (security check)
+        if (!isValidStreamUrl(result.streamUrl)) {
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[SafariNativePlayer] Invalid stream URL:', result.streamUrl);
+          }
+          setLoadError('Invalid stream URL');
+          onErrorRef.current?.();
           return;
         }
 
@@ -143,7 +174,7 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
           console.error('[SafariNativePlayer] Initialization error:', error);
         }
         setLoadError(error instanceof Error ? error.message : 'Failed to initialize player');
-        onError?.();
+        onErrorRef.current?.();
       }
     };
 
@@ -160,7 +191,7 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
         videoElement.load();
       }
     };
-  }, [channel, preferredProxy, onError]);
+  }, [channel, preferredProxy]); // onError removed from dependencies to prevent re-initialization
 
   // Handle Picture-in-Picture toggle
   const handlePictureInPicture = useCallback(() => {
@@ -206,6 +237,7 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
         muted={false}
         playsInline
         x-webkit-airplay="allow"
+        aria-label={`Twitch stream for ${channel}`}
       />
 
       {isLoading && (
@@ -225,14 +257,15 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
 
       {/* Safari-specific controls overlay */}
       {!isLoading && (isPiPSupported || isAirPlaySupported) && (
-        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex gap-2">
           {isPiPSupported && (
             <button
               onClick={handlePictureInPicture}
               className="bg-black/80 text-white text-sm px-3 py-2 rounded-lg border border-white/20 hover:border-white/40 backdrop-blur-sm cursor-pointer"
               title="Picture in Picture"
+              aria-label="Toggle Picture in Picture mode"
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M19 7h-8v6h8V7zm2-4H3c-1.1 0-2 .9-2 2v14c0 1.1.9 1.98 2 1.98h18c1.1 0 2-.88 2-1.98V5c0-1.1-.9-2-2-2zm0 16.01H3V4.98h18v14.03z"/>
               </svg>
             </button>
@@ -242,8 +275,9 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
               onClick={handleAirPlay}
               className="bg-black/80 text-white text-sm px-3 py-2 rounded-lg border border-white/20 hover:border-white/40 backdrop-blur-sm cursor-pointer"
               title="AirPlay"
+              aria-label="Stream to AirPlay device"
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 22h12l-6-6zM21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v-2H3V5h18v12h-4v2h4c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
               </svg>
             </button>
