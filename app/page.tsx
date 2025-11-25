@@ -84,7 +84,26 @@ export default function Home() {
   return (
     <ErrorBoundary>
       <div>
-        <h1 className="text-3xl font-bold text-text mb-2">live now</h1>
+        {/* Header with Coffee Button */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-end mb-2">
+          <h1 className="text-3xl font-bold text-text sm:col-span-1 lg:col-span-2 xl:col-span-3">
+            live now
+          </h1>
+          <div className="flex justify-end">
+            <a
+              href="https://ko-fi.com/chasemarsh"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-2 text-text-muted hover:text-accent transition-colors"
+              aria-label="Buy me a coffee on Ko-fi"
+            >
+              <span className="text-2xl" aria-hidden="true">☕</span>
+              <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap">
+                buy me a coffee
+              </span>
+            </a>
+          </div>
+        </div>
 
         {/* Error Display */}
         {error && (
