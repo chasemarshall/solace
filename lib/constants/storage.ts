@@ -6,6 +6,8 @@
 export const STORAGE_KEYS = {
   // Proxy and player settings
   PROXY_SELECTION: 'proxy_selection',
+  USE_NATIVE_PLAYER: 'use_native_player',
+  // Legacy key for backward compatibility (will be migrated)
   DISABLE_NATIVE_PLAYER: 'disable_native_player',
 
   // Chat settings
