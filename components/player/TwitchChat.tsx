@@ -4,6 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { connectChat } from "@/lib/twitch/chat";
 import { Tooltip } from "@/components/ui/Tooltip";
 import DOMPurify from "dompurify";
+import { useStorageListeners } from "@/hooks/useStorageListener";
+import { STORAGE_KEYS } from "@/lib/constants/storage";
+import { UI_CONSTANTS } from "@/lib/constants/ui";
+import type { Client } from "tmi.js";
 
 type Badge = {
   setID: string;
@@ -82,7 +86,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [ffzEnabled, setFfzEnabled] = useState(true);
   const [seventvEnabled, setSeventvEnabled] = useState(true);
   
-  const clientRef = useRef<any>(null);
+  const clientRef = useRef<Client | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const scrollPendingRef = useRef<boolean>(false);
   // Removed smooth scroll animation refs since we always auto-scroll
@@ -91,56 +95,41 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   const [oauth, setOauth] = useState<string | undefined>();
   const canSend = !!username && !!oauth;
 
+  // Load credentials from localStorage
   useEffect(() => {
-    // Check for stored credentials
-    const storedUsername = localStorage.getItem('twitch_username');
-    const storedOauth = localStorage.getItem('twitch_oauth');
-    
+    const storedUsername = localStorage.getItem(STORAGE_KEYS.TWITCH_USERNAME);
+    const storedOauth = localStorage.getItem(STORAGE_KEYS.TWITCH_OAUTH);
+
     setUsername(storedUsername || undefined);
     setOauth(storedOauth || undefined);
-    
-    // Listen for storage changes
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'twitch_username') {
-        setUsername(e.newValue || undefined);
-      } else if (e.key === 'twitch_oauth') {
-        setOauth(e.newValue || undefined);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Badge visibility and emote preferences management
+  // Listen for credential changes using custom hook
+  useStorageListeners({
+    [STORAGE_KEYS.TWITCH_USERNAME]: (value) => setUsername(value || undefined),
+    [STORAGE_KEYS.TWITCH_OAUTH]: (value) => setOauth(value || undefined),
+  });
+
+  // Load preferences from localStorage
   useEffect(() => {
-    // Load preferences from localStorage
-    const savedShowBadges = localStorage.getItem('chat_show_badges');
-    const savedBttv = localStorage.getItem('emotes_bttv');
-    const savedFfz = localStorage.getItem('emotes_ffz');
-    const savedSeventv = localStorage.getItem('emotes_7tv');
-    
+    const savedShowBadges = localStorage.getItem(STORAGE_KEYS.CHAT_SHOW_BADGES);
+    const savedBttv = localStorage.getItem(STORAGE_KEYS.EMOTES_BTTV);
+    const savedFfz = localStorage.getItem(STORAGE_KEYS.EMOTES_FFZ);
+    const savedSeventv = localStorage.getItem(STORAGE_KEYS.EMOTES_7TV);
+
     setShowBadges(savedShowBadges !== 'false');
     setBttvEnabled(savedBttv !== 'false');
     setFfzEnabled(savedFfz !== 'false');
     setSeventvEnabled(savedSeventv !== 'false');
-
-    // Listen for storage changes
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'chat_show_badges') {
-        setShowBadges(e.newValue !== 'false');
-      } else if (e.key === 'emotes_bttv') {
-        setBttvEnabled(e.newValue !== 'false');
-      } else if (e.key === 'emotes_ffz') {
-        setFfzEnabled(e.newValue !== 'false');
-      } else if (e.key === 'emotes_7tv') {
-        setSeventvEnabled(e.newValue !== 'false');
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Listen for preference changes using custom hook
+  useStorageListeners({
+    [STORAGE_KEYS.CHAT_SHOW_BADGES]: (value) => setShowBadges(value !== 'false'),
+    [STORAGE_KEYS.EMOTES_BTTV]: (value) => setBttvEnabled(value !== 'false'),
+    [STORAGE_KEYS.EMOTES_FFZ]: (value) => setFfzEnabled(value !== 'false'),
+    [STORAGE_KEYS.EMOTES_7TV]: (value) => setSeventvEnabled(value !== 'false'),
+  });
 
   // Enhanced user color - make colors more vibrant
   const enhanceUserColor = (color?: string) => {
@@ -288,7 +277,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     try {
       // Always fetch global emotes with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), UI_CONSTANTS.EMOTE_FETCH_TIMEOUT);
       let globalRes: Response;
       try {
         globalRes = await fetch(
@@ -359,7 +348,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     try {
       // Always fetch global emotes with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), UI_CONSTANTS.EMOTE_FETCH_TIMEOUT);
       let globalRes: Response;
       try {
         globalRes = await fetch(
@@ -434,7 +423,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     try {
       // Always fetch global emotes with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), UI_CONSTANTS.EMOTE_FETCH_TIMEOUT);
       let globalRes: Response;
       try {
         globalRes = await fetch(

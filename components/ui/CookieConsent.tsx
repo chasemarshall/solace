@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
+import { STORAGE_KEYS } from "@/lib/constants/storage";
 
 export default function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false);
@@ -9,7 +10,7 @@ export default function CookieConsent() {
 
   useEffect(() => {
     // Check if user has already made a choice
-    const hasConsented = localStorage.getItem('cookie-consent');
+    const hasConsented = localStorage.getItem(STORAGE_KEYS.COOKIE_CONSENT);
     if (!hasConsented) {
       // Show banner after a short delay to not be jarring
       const timer = setTimeout(() => setIsVisible(true), 2000);
@@ -18,12 +19,12 @@ export default function CookieConsent() {
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem('cookie-consent', 'accepted');
+    localStorage.setItem(STORAGE_KEYS.COOKIE_CONSENT, 'accepted');
     setIsVisible(false);
   };
 
   const handleDecline = () => {
-    localStorage.setItem('cookie-consent', 'declined');
+    localStorage.setItem(STORAGE_KEYS.COOKIE_CONSENT, 'declined');
     setIsVisible(false);
   };
 
