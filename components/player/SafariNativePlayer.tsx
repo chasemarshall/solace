@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useImmersive } from '@/contexts/ImmersiveContext';
 import { findWorkingProxy, type ProxyEndpoint } from '@/lib/twitch/proxyFailover';
 import { detectMediaCapabilities } from '@/lib/utils/browserCompat';
 import { STORAGE_KEYS } from '@/lib/constants/storage';
 import { useStorageListener } from '@/hooks/useStorageListener';
+import { PlayerError, PlayerLoading, PlayerBadge, PlayerContainer } from '@/components/player/PlayerUI';
 
 interface SafariNativePlayerProps {
   channel: string;
@@ -28,7 +28,6 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
   const [isPiPSupported, setIsPiPSupported] = useState(false);
   const [isAirPlaySupported, setIsAirPlaySupported] = useState(false);
   const [preferredProxy, setPreferredProxy] = useState<string>('auto');
-  const { isImmersiveMode } = useImmersive();
 
   // Load proxy preference
   useEffect(() => {
@@ -185,21 +184,11 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
   }, [isAirPlaySupported]);
 
   if (loadError) {
-    return (
-      <div className={`relative w-full aspect-video bg-black flex items-center justify-center ${isImmersiveMode ? '' : 'rounded-xl'} overflow-hidden shadow-2xl`}>
-        <div className="text-center text-white p-8">
-          <div className="text-red-400 text-xl mb-3">⚠ stream error</div>
-          <div className="text-sm opacity-75 mb-4">{loadError}</div>
-          <div className="text-xs opacity-50">
-            channel: {channel}
-          </div>
-        </div>
-      </div>
-    );
+    return <PlayerError error={loadError} channel={channel} />;
   }
 
   return (
-    <div className={`relative w-full aspect-video bg-black ${isImmersiveMode ? '' : 'rounded-xl'} overflow-hidden shadow-2xl group`}>
+    <PlayerContainer>
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
@@ -211,18 +200,11 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
       />
 
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-white text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto mb-4"></div>
-            <div className="text-lg font-semibold">loading stream</div>
-            <div className="text-sm opacity-75 mt-2">
-              {currentProxy ? `${currentProxy.name.toLowerCase()} (${currentProxy.region.toLowerCase()})` : 'finding best proxy...'} • native player
-            </div>
-            <div className="text-xs opacity-50 mt-1">
-              optimized for safari
-            </div>
-          </div>
-        </div>
+        <PlayerLoading
+          currentProxy={currentProxy}
+          failoverAttempts={0}
+          playerType="native"
+        />
       )}
 
       {/* Safari-specific controls overlay */}
@@ -253,15 +235,7 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
         </div>
       )}
 
-      {/* Native player badge */}
-      <div className="absolute top-4 left-4 bg-blue-600/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-lg">
-        <div className="flex items-center gap-2">
-          <span>native player</span>
-          {currentProxy && (
-            <span className="opacity-75">• {currentProxy.name.toLowerCase()}</span>
-          )}
-        </div>
-      </div>
+      <PlayerBadge currentProxy={currentProxy} badgeType="native" />
 
       {/* Quality info badge - Native player uses auto quality */}
       <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -269,6 +243,6 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
           Auto Quality (Safari Optimized)
         </div>
       </div>
-    </div>
+    </PlayerContainer>
   );
 }

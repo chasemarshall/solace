@@ -8,6 +8,7 @@ import { useStorageListeners } from "@/hooks/useStorageListener";
 import { STORAGE_KEYS } from "@/lib/constants/storage";
 import { UI_CONSTANTS } from "@/lib/constants/ui";
 import type { Client } from "tmi.js";
+import { fetchEmotes } from "@/lib/twitch/emoteFetcher";
 
 type Badge = {
   setID: string;
@@ -272,223 +273,20 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     };
   };
 
-  // Fetch BTTV emotes
+  // Fetch emotes using the centralized utility (eliminates ~200 lines of duplication)
   const fetchBttvEmotes = useCallback(async (channelName: string, roomId?: string) => {
-    try {
-      // Always fetch global emotes with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), UI_CONSTANTS.EMOTE_FETCH_TIMEOUT);
-      let globalRes: Response;
-      try {
-        globalRes = await fetch(
-          "https://api.betterttv.net/3/cached/emotes/global",
-          { signal: controller.signal }
-        );
-      } finally {
-        clearTimeout(timeoutId);
-      }
-      
-      if (!globalRes.ok) {
-        throw new Error(`BTTV global API returned ${globalRes.status}`);
-      }
-      
-      const globalEmotes = await globalRes.json();
-      
-      if (!Array.isArray(globalEmotes)) {
-        throw new Error("BTTV global API returned invalid data format");
-      }
-
-      const allBttvEmotes: { [key: string]: Emote } = {};
-      
-      // Add global emotes
-      globalEmotes.forEach((emote: any) => {
-        allBttvEmotes[emote.code] = {
-          id: emote.id,
-          name: emote.code,
-          urls: {
-            "1": `https://cdn.betterttv.net/emote/${emote.id}/1x`,
-            "2": `https://cdn.betterttv.net/emote/${emote.id}/2x`,
-            "4": `https://cdn.betterttv.net/emote/${emote.id}/3x`,
-          }
-        };
-      });
-
-      // Try to fetch channel-specific emotes if we have the room ID
-      if (roomId) {
-        try {
-          const channelRes = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${roomId}`);
-          if (channelRes.ok) {
-            const channelData = await channelRes.json();
-            [...(channelData.channelEmotes || []), ...(channelData.sharedEmotes || [])].forEach((emote: any) => {
-              allBttvEmotes[emote.code] = {
-                id: emote.id,
-                name: emote.code,
-                urls: {
-                  "1": `https://cdn.betterttv.net/emote/${emote.id}/1x`,
-                  "2": `https://cdn.betterttv.net/emote/${emote.id}/2x`,
-                  "4": `https://cdn.betterttv.net/emote/${emote.id}/3x`,
-                }
-              };
-            });
-          }
-        } catch (e) {
-          // No BTTV channel emotes found
-        }
-      }
-      
-      setBttvEmotes(allBttvEmotes);
-    } catch (e) {
-      // Failed to fetch BTTV emotes
-      setBttvEmotes({});
-    }
+    const emotes = await fetchEmotes('bttv', channelName, roomId);
+    setBttvEmotes(emotes);
   }, []);
 
-  // Fetch FFZ emotes with fixed CDN URLs
-  const fetchFfzEmotes = useCallback(async (channelName: string) => {
-    try {
-      // Always fetch global emotes with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), UI_CONSTANTS.EMOTE_FETCH_TIMEOUT);
-      let globalRes: Response;
-      try {
-        globalRes = await fetch(
-          "https://api.frankerfacez.com/v1/set/global",
-          { signal: controller.signal }
-        );
-      } finally {
-        clearTimeout(timeoutId);
-      }
-      
-      if (!globalRes.ok) {
-        throw new Error(`FFZ global API returned ${globalRes.status}`);
-      }
-      
-      const globalData = await globalRes.json();
-      
-      if (!globalData.sets) {
-        throw new Error("FFZ global API returned invalid data format");
-      }
-
-      const allFfzEmotes: { [key: string]: Emote } = {};
-      
-      // Add global emotes with fixed CDN URLs
-      Object.values(globalData.sets || {}).forEach((set: any) => {
-        Object.values(set.emoticons || {}).forEach((emote: any) => {
-          allFfzEmotes[emote.name] = {
-            id: emote.id.toString(),
-            name: emote.name,
-            urls: {
-              "1": `https://cdn.frankerfacez.com/emoticon/${emote.id}/1`,
-              "2": `https://cdn.frankerfacez.com/emoticon/${emote.id}/2`,
-              "4": `https://cdn.frankerfacez.com/emoticon/${emote.id}/4`,
-            }
-          };
-        });
-      });
-
-      // Try to fetch channel-specific emotes
-      try {
-        const channelRes = await fetch(`https://api.frankerfacez.com/v1/room/${channelName}`);
-        if (channelRes.ok) {
-          const channelData = await channelRes.json();
-          if (channelData?.sets) {
-            Object.values(channelData.sets).forEach((set: any) => {
-              Object.values(set.emoticons || {}).forEach((emote: any) => {
-                allFfzEmotes[emote.name] = {
-                  id: emote.id.toString(),
-                  name: emote.name,
-                  urls: {
-                    "1": `https://cdn.frankerfacez.com/emoticon/${emote.id}/1`,
-                    "2": `https://cdn.frankerfacez.com/emoticon/${emote.id}/2`,
-                    "4": `https://cdn.frankerfacez.com/emoticon/${emote.id}/4`,
-                  }
-                };
-              });
-            });
-          }
-        }
-      } catch (e) {
-        // FFZ channel emotes request failed
-      }
-      
-      setFfzEmotes(allFfzEmotes);
-    } catch (e) {
-      // Failed to fetch FFZ emotes
-      setFfzEmotes({});
-    }
+  const fetchFfzEmotes = useCallback(async (channelName: string, roomId?: string) => {
+    const emotes = await fetchEmotes('ffz', channelName, roomId);
+    setFfzEmotes(emotes);
   }, []);
 
-  // Fetch 7TV emotes
   const fetchSeventvEmotes = useCallback(async (channelName: string, roomId?: string) => {
-    try {
-      // Always fetch global emotes with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), UI_CONSTANTS.EMOTE_FETCH_TIMEOUT);
-      let globalRes: Response;
-      try {
-        globalRes = await fetch(
-          "https://7tv.io/v3/emote-sets/global",
-          { signal: controller.signal }
-        );
-      } finally {
-        clearTimeout(timeoutId);
-      }
-      
-      if (!globalRes.ok) {
-        throw new Error(`7TV global API returned ${globalRes.status}`);
-      }
-      
-      const globalData = await globalRes.json();
-      
-      if (!globalData.emotes) {
-        throw new Error("7TV global API returned invalid data format");
-      }
-
-      const allSeventvEmotes: { [key: string]: Emote } = {};
-      
-      // Add global emotes
-      globalData.emotes.forEach((emote: any) => {
-        allSeventvEmotes[emote.name] = {
-          id: emote.id,
-          name: emote.name,
-          urls: {
-            "1": `https://cdn.7tv.app/emote/${emote.id}/1x.webp`,
-            "2": `https://cdn.7tv.app/emote/${emote.id}/2x.webp`,
-            "4": `https://cdn.7tv.app/emote/${emote.id}/3x.webp`,
-          }
-        };
-      });
-
-      // Try to fetch channel-specific emotes if we have the room ID
-      if (roomId) {
-        try {
-          const channelRes = await fetch(`https://7tv.io/v3/users/twitch/${roomId}`);
-          if (channelRes.ok) {
-            const channelData = await channelRes.json();
-            if (channelData?.emote_set?.emotes) {
-              channelData.emote_set.emotes.forEach((emote: any) => {
-                allSeventvEmotes[emote.name] = {
-                  id: emote.id,
-                  name: emote.name,
-                  urls: {
-                    "1": `https://cdn.7tv.app/emote/${emote.id}/1x.webp`,
-                    "2": `https://cdn.7tv.app/emote/${emote.id}/2x.webp`,
-                    "4": `https://cdn.7tv.app/emote/${emote.id}/3x.webp`,
-                  }
-                };
-              });
-            }
-          }
-        } catch (e) {
-          // No 7TV channel emotes found
-        }
-      }
-      
-      setSeventvEmotes(allSeventvEmotes);
-    } catch (e) {
-      // Failed to fetch 7TV emotes
-      setSeventvEmotes({});
-    }
+    const emotes = await fetchEmotes('7tv', channelName, roomId);
+    setSeventvEmotes(emotes);
   }, []);
 
   // Get channel ID and load emotes (only in enhanced mode)
