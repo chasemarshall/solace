@@ -89,7 +89,7 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-text sm:col-span-1 lg:col-span-2 xl:col-span-3">
             live now
           </h1>
-          <div className="flex justify-end">
+          <div className="flex items-end justify-end">
             <a
               href="https://ko-fi.com/chasemarsh"
               target="_blank"
