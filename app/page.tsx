@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import LiveCard from "@/components/stream/LiveCard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { UI_CONSTANTS } from "@/lib/constants/ui";
 
 type Stream = {
   id: string;
@@ -65,7 +66,7 @@ export default function Home() {
     if (!el) return;
     const io = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) load();
-    }, { rootMargin: "800px" });
+    }, { rootMargin: UI_CONSTANTS.INFINITE_SCROLL_MARGIN });
     io.observe(el);
     return () => io.disconnect();
   }, [load]);

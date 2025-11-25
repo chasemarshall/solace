@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Hls from 'hls.js';
 import { useImmersive } from '@/contexts/ImmersiveContext';
 import { findWorkingProxy, ProxyHealthMonitor } from '@/lib/twitch/proxyFailover';
 import type { ProxyEndpoint } from '@/lib/twitch/proxyConfig';
+import { useStorageListener } from '@/hooks/useStorageListener';
+import { STORAGE_KEYS } from '@/lib/constants/storage';
 
 interface TtvLolPlayerProps {
   channel: string;
@@ -26,22 +28,22 @@ export default function TtvLolPlayer({ channel, onError }: TtvLolPlayerProps) {
 
   // Load proxy preference from localStorage
   useEffect(() => {
-    const savedProxy = localStorage.getItem('proxy_selection');
+    const savedProxy = localStorage.getItem(STORAGE_KEYS.PROXY_SELECTION);
     if (savedProxy) {
       setPreferredProxy(savedProxy);
     }
+  }, []);
 
-    // Listen for changes to proxy selection
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'proxy_selection' && e.newValue) {
-        setPreferredProxy(e.newValue);
+  // Listen for changes to proxy selection using custom hook
+  useStorageListener(
+    STORAGE_KEYS.PROXY_SELECTION,
+    useCallback((newValue) => {
+      if (newValue) {
+        setPreferredProxy(newValue);
         // Player will automatically reinitialize due to dependency array
       }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    }, [])
+  );
 
   useEffect(() => {
     if (!videoRef.current || !channel) return;

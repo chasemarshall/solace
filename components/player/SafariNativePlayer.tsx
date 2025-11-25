@@ -5,6 +5,7 @@ import { useImmersive } from '@/contexts/ImmersiveContext';
 import { findWorkingProxy, type ProxyEndpoint } from '@/lib/twitch/proxyFailover';
 import { detectMediaCapabilities } from '@/lib/utils/browserCompat';
 import { STORAGE_KEYS } from '@/lib/constants/storage';
+import { useStorageListener } from '@/hooks/useStorageListener';
 
 interface SafariNativePlayerProps {
   channel: string;
@@ -35,16 +36,17 @@ export default function SafariNativePlayer({ channel, onError }: SafariNativePla
     if (savedProxy) {
       setPreferredProxy(savedProxy);
     }
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEYS.PROXY_SELECTION && e.newValue) {
-        setPreferredProxy(e.newValue);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
+
+  // Listen for changes to proxy selection using custom hook
+  useStorageListener(
+    STORAGE_KEYS.PROXY_SELECTION,
+    useCallback((newValue) => {
+      if (newValue) {
+        setPreferredProxy(newValue);
+      }
+    }, [])
+  );
 
   // Detect Safari-specific capabilities
   useEffect(() => {

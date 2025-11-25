@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { useStorageListener } from "@/hooks/useStorageListener";
+import { STORAGE_KEYS } from "@/lib/constants/storage";
 
 interface StorageAccessState {
   consentGiven: boolean;
@@ -25,24 +27,20 @@ export function StorageAccessProvider({ children }: { children: ReactNode }) {
 
   // Check if user has given consent
   useEffect(() => {
-    const consent = localStorage.getItem('cookie-consent');
+    const consent = localStorage.getItem(STORAGE_KEYS.COOKIE_CONSENT);
     setConsentGiven(consent === 'accepted');
   }, []);
 
-  // Listen for consent changes
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'cookie-consent') {
-        setConsentGiven(e.newValue === 'accepted');
-        if (e.newValue !== 'accepted') {
-          setAccessGranted(null); // Reset access state if consent withdrawn
-        }
+  // Listen for consent changes using custom hook
+  useStorageListener(
+    STORAGE_KEYS.COOKIE_CONSENT,
+    useCallback((newValue) => {
+      setConsentGiven(newValue === 'accepted');
+      if (newValue !== 'accepted') {
+        setAccessGranted(null); // Reset access state if consent withdrawn
       }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    }, [])
+  );
 
   const requestAccess = async (): Promise<boolean> => {
     // Only attempt if consent was given

@@ -23,4 +23,10 @@ export const STORAGE_KEYS = {
   TWITCH_AUTH: 'twitch_auth',
   TWITCH_USERNAME: 'twitch_username',
   TWITCH_OAUTH: 'twitch_oauth',
+
+  // Favorites
+  TWITCH_FAVORITES: 'twitch-favorites',
+
+  // Cookie consent
+  COOKIE_CONSENT: 'cookie-consent',
 } as const;
