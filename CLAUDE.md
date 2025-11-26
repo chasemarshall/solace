@@ -30,6 +30,7 @@ This file is automatically ingested by Claude Code at session start. It helps gr
 - Always clean up effects (e.g. `player.remove()` if DOM exists).
 - Use camelCase for variables, PascalCase for React components.
 - Keep CSP headers strict; only add new domains with justification.
+- **UI styling**: Always use `rounded-xl` for external rounded boxes to maintain consistent corner radius across the application.
 
 ---
 
