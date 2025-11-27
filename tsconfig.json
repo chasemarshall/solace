@@ -23,7 +23,8 @@
       ]
     },
     "types": [
-      "node"
+      "node",
+      "vitest/globals"
     ],
     "plugins": [
       {
