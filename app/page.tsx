@@ -6,6 +6,10 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { UI_CONSTANTS } from "@/lib/constants/ui";
 
+const PAGE_SIZE = 12;
+const PREFETCH_TARGET = PAGE_SIZE * 3; // Aim to keep ~3 pages ahead while scrolling
+const PREFETCH_DELAY_MS = 300;
+
 type Stream = {
   id: string;
   user_name: string;
@@ -20,18 +24,25 @@ export default function Home() {
   const [items, setItems] = useState<Stream[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [backgroundLoading, setBackgroundLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { favorites } = useFavorites();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const load = useCallback(async () => {
-    if (loading) return;
-    setLoading(true);
+  const load = useCallback(async (opts?: { background?: boolean }) => {
+    if (loading || backgroundLoading) return;
+
+    const isBackground = opts?.background ?? false;
+    if (isBackground) {
+      setBackgroundLoading(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
-    
+
     try {
       const url = new URL("/api/streams", window.location.origin);
-      url.searchParams.set("first", "24");
+      url.searchParams.set("first", PAGE_SIZE.toString());
       if (cursor) url.searchParams.set("after", cursor);
       
       const response = await fetch(url.toString());
@@ -54,12 +65,24 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Failed to load streams");
     } finally {
       setLoading(false);
+      setBackgroundLoading(false);
     }
-  }, [loading, cursor]);
+  }, [loading, backgroundLoading, cursor]);
 
-  useEffect(() => { 
-    load(); 
+  useEffect(() => {
+    load();
   }, [load]);
+
+  useEffect(() => {
+    if (!cursor || loading || backgroundLoading) return;
+    if (items.length >= PREFETCH_TARGET) return;
+
+    const timer = setTimeout(() => {
+      load({ background: true });
+    }, PREFETCH_DELAY_MS);
+
+    return () => clearTimeout(timer);
+  }, [cursor, items.length, loading, backgroundLoading, load]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -177,7 +200,9 @@ retry
         )}
 
         <div ref={sentinelRef} className="h-16" />
-        {loading && <p className="mt-4 text-center text-sm text-text-muted">loading…</p>}
+        {(loading || backgroundLoading) && (
+          <p className="mt-4 text-center text-sm text-text-muted">loading…</p>
+        )}
       </div>
     </ErrorBoundary>
   );
