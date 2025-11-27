@@ -1,6 +1,27 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { fetchEmotes, fetchAllEmotes } from '@/lib/twitch/emoteFetcher';
 
+// Helper to create more complete Response mocks
+function createMockResponse(data: any, options: Partial<Response> = {}): Response {
+  return {
+    ok: options.ok ?? true,
+    status: options.status ?? 200,
+    statusText: options.statusText ?? 'OK',
+    headers: new Headers(options.headers),
+    redirected: false,
+    type: 'basic',
+    url: '',
+    body: null,
+    bodyUsed: false,
+    json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    blob: () => Promise.resolve(new Blob()),
+    formData: () => Promise.resolve(new FormData()),
+    clone: function() { return this; },
+  } as Response;
+}
+
 describe('emoteFetcher utilities', () => {
   const originalFetch = global.fetch;
 
@@ -23,12 +44,9 @@ describe('emoteFetcher utilities', () => {
 
       global.fetch = vi.fn((url: string) => {
         if (url.includes('global')) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(mockGlobalEmotes),
-          } as Response);
+          return Promise.resolve(createMockResponse(mockGlobalEmotes));
         }
-        return Promise.resolve({ ok: false } as Response);
+        return Promise.resolve(createMockResponse(null, { ok: false, status: 404 }));
       });
 
       const emotes = await fetchEmotes('bttv', 'testchannel', '123456');
@@ -197,11 +215,38 @@ describe('emoteFetcher utilities', () => {
   });
 
   describe('timeout behavior', () => {
-    // Note: Timeout testing with AbortController and fake timers is unreliable in jsdom
-    // The timeout mechanism is tested indirectly through fetchWithTimeout in actual usage
-    it.skip('should timeout after specified duration', async () => {
-      // Skipped: Fake timers don't work reliably with AbortController in test environment
-      // The timeout functionality works correctly in production but is difficult to test
+    it('should handle AbortController signal correctly', async () => {
+      let abortSignalReceived = false;
+
+      global.fetch = vi.fn((url: string, options?: any) => {
+        // Check if signal was provided
+        if (options?.signal) {
+          abortSignalReceived = true;
+        }
+
+        // Return immediately
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]),
+        } as Response);
+      });
+
+      // Start fetch
+      await fetchEmotes('bttv', 'testchannel');
+
+      // Verify AbortController signal was passed to fetch
+      expect(abortSignalReceived).toBe(true);
+    });
+
+    it('should return empty object on network timeout/abort', async () => {
+      global.fetch = vi.fn(() => {
+        return Promise.reject(new Error('Network timeout'));
+      });
+
+      const emotes = await fetchEmotes('bttv', 'testchannel');
+
+      // Should gracefully handle timeout and return empty object
+      expect(emotes).toEqual({});
     });
   });
 
@@ -260,9 +305,13 @@ describe('emoteFetcher utilities', () => {
 
   describe('fetchAllEmotes', () => {
     it('should fetch emotes from all providers in parallel', async () => {
-      const fetchStartTime = Date.now();
+      const fetchTimes: number[] = [];
+      const startTime = Date.now();
 
       global.fetch = vi.fn((url: string) => {
+        // Record fetch start time relative to test start
+        fetchTimes.push(Date.now() - startTime);
+
         const mockData = url.includes('betterttv')
           ? []
           : url.includes('frankerfacez')
@@ -280,6 +329,17 @@ describe('emoteFetcher utilities', () => {
       expect(result).toHaveProperty('bttv');
       expect(result).toHaveProperty('ffz');
       expect(result).toHaveProperty('7tv');
+
+      // All 3 providers should be called (6 total: global + channel for each)
+      expect(global.fetch).toHaveBeenCalledTimes(6);
+
+      // Verify parallel execution: all fetches should start at roughly the same time
+      // Calculate spread between first and last fetch start times
+      const timeSpread = Math.max(...fetchTimes) - Math.min(...fetchTimes);
+
+      // If truly parallel, all should start within a few milliseconds
+      // Allow up to 50ms for test execution overhead
+      expect(timeSpread).toBeLessThan(50);
 
       // Verify it was called for all providers
       expect(global.fetch).toHaveBeenCalledWith(

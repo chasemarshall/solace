@@ -69,3 +69,14 @@ export async function helix(path: string, params: Record<string, string | number
   if (!r.ok) throw new Error(`Helix ${path} failed: ${r.status} ${await r.text()}`);
   return r.json();
 }
+
+/**
+ * Reset the token cache - for testing purposes only
+ * @internal
+ */
+export function __resetTokenCache() {
+  if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
+    console.warn('__resetTokenCache should only be called in test/development environments');
+  }
+  cache = null;
+}
