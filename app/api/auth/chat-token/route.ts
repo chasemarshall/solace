@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { applyCookieDescriptors, ensureValidTwitchTokens } from '@/lib/auth/twitchTokens';
 
 // Force dynamic rendering since we're reading cookies
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get tokens from HTTP-only cookie
-    const tokensCookie = request.cookies.get('twitch_tokens');
-    
-    if (!tokensCookie) {
+    const { tokens, cookies } = await ensureValidTwitchTokens(request);
+    if (!tokens) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const tokensData = JSON.parse(tokensCookie.value);
-    
-    // Verify token is still valid
-    if (!tokensData.access_token) {
-      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 });
-    }
-
     // Return OAuth token formatted for TMI.js
-    return NextResponse.json({
-      oauth: `oauth:${tokensData.access_token}`,
+    const response = NextResponse.json({
+      oauth: `oauth:${tokens.access_token}`,
     });
+
+    applyCookieDescriptors(response, cookies);
+
+    return response;
     
   } catch (error) {
     console.error('Chat token API error:', error);
