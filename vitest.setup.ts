@@ -79,3 +79,15 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as any;
+
+// Mock CSS.supports
+global.CSS = {
+  supports: vi.fn((property: string, value?: string) => {
+    // Mock common browser features as supported
+    if (property === 'backdrop-filter' || property === '-webkit-backdrop-filter') {
+      return true;
+    }
+    return false;
+  }),
+  escape: (value: string) => value.replace(/[^\w-]/g, '\\$&'),
+} as any;
