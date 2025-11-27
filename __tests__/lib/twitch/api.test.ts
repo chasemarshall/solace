@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { helix } from '@/lib/twitch/api';
+import { helix, __resetTokenCache } from '@/lib/twitch/api';
 
 describe('twitch api utilities', () => {
   const originalFetch = global.fetch;
@@ -7,6 +7,7 @@ describe('twitch api utilities', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetTokenCache(); // Reset cache before each test
     // Set up environment variables
     process.env = {
       ...originalEnv,
@@ -135,9 +136,21 @@ describe('twitch api utilities', () => {
       await expect(helix('users', { login: 'testuser' })).rejects.toThrow('Helix users failed');
     });
 
-    // Note: Skipped due to module-level token caching - validation logic works in production
-    it.skip('should throw error when missing TWITCH_CLIENT_ID', async () => {});
-    it.skip('should throw error when missing TWITCH_CLIENT_SECRET', async () => {});
+    it('should throw error when missing TWITCH_CLIENT_ID', async () => {
+      delete process.env.TWITCH_CLIENT_ID;
+
+      await expect(helix('users', { login: 'testuser' })).rejects.toThrow(
+        'Missing TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET'
+      );
+    });
+
+    it('should throw error when missing TWITCH_CLIENT_SECRET', async () => {
+      delete process.env.TWITCH_CLIENT_SECRET;
+
+      await expect(helix('users', { login: 'testuser' })).rejects.toThrow(
+        'Missing TWITCH_CLIENT_ID or TWITCH_CLIENT_SECRET'
+      );
+    });
 
     it('should handle different query parameter types', async () => {
       let helixUrl = '';
@@ -206,8 +219,79 @@ describe('twitch api utilities', () => {
   });
 
   describe('token fetching', () => {
-    // Note: Skipped due to module-level token caching - token logic works in production
-    it.skip('should fetch token when making API call', async () => {});
-    it.skip('should throw error when token fetch fails', async () => {});
+    it('should fetch token when making API call', async () => {
+      let tokenRequested = false;
+
+      global.fetch = vi.fn((url: string) => {
+        if (url.includes('oauth2/token')) {
+          tokenRequested = true;
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                access_token: 'fresh_token',
+                expires_in: 3600,
+              }),
+          } as Response);
+        } else if (url.includes('helix')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: [] }),
+          } as Response);
+        }
+        return Promise.reject(new Error('Unexpected URL'));
+      });
+
+      await helix('users', { login: 'testuser' });
+
+      expect(tokenRequested).toBe(true);
+    });
+
+    it('should throw error when token fetch fails', async () => {
+      global.fetch = vi.fn((url: string) => {
+        if (url.includes('oauth2/token')) {
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            text: () => Promise.resolve('Unauthorized'),
+          } as Response);
+        }
+        return Promise.reject(new Error('Unexpected URL'));
+      });
+
+      await expect(helix('users', { login: 'testuser' })).rejects.toThrow('Token fetch failed');
+    });
+
+    it('should cache token and reuse for subsequent calls', async () => {
+      let tokenFetchCount = 0;
+
+      global.fetch = vi.fn((url: string) => {
+        if (url.includes('oauth2/token')) {
+          tokenFetchCount++;
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                access_token: 'cached_token',
+                expires_in: 3600,
+              }),
+          } as Response);
+        } else if (url.includes('helix')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: [] }),
+          } as Response);
+        }
+        return Promise.reject(new Error('Unexpected URL'));
+      });
+
+      // First call
+      await helix('users', { login: 'user1' });
+      expect(tokenFetchCount).toBe(1);
+
+      // Second call should use cached token
+      await helix('users', { login: 'user2' });
+      expect(tokenFetchCount).toBe(1); // Should not increase
+    });
   });
 });
