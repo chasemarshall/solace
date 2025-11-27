@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, getOrCreateUser } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { extractSessionIdentifier } from '@/lib/auth/twitchTokens';
 
 /**
  * GET /api/follows
@@ -8,9 +8,8 @@ import { cookies } from 'next/headers';
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     const follows = await prisma.follow.findMany({
       where: { userId },
@@ -50,9 +49,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     const normalizedChannel = channel.toLowerCase();
 
@@ -99,9 +97,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     const normalizedChannel = channel.toLowerCase();
 
@@ -137,9 +134,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     const normalizedChannel = channel.toLowerCase();
 

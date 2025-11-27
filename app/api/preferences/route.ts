@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, getOrCreateUser } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { extractSessionIdentifier } from '@/lib/auth/twitchTokens';
 
 /**
  * GET /api/preferences
@@ -8,9 +8,8 @@ import { cookies } from 'next/headers';
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     let preferences = await prisma.userPreference.findUnique({
       where: { userId },
@@ -46,9 +45,8 @@ export async function PATCH(request: NextRequest) {
   try {
     const updates = await request.json();
 
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     // Use upsert to create or update preferences
     const preferences = await prisma.userPreference.upsert({

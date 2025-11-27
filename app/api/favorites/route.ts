@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma, getOrCreateUser } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { extractSessionIdentifier } from '@/lib/auth/twitchTokens';
 
 /**
  * GET /api/favorites
@@ -9,9 +9,8 @@ import { cookies } from 'next/headers';
 export async function GET(request: NextRequest) {
   try {
     // Get user session (for now, use a cookie-based approach)
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     const favorites = await prisma.favorite.findMany({
       where: { userId },
@@ -45,9 +44,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     const normalizedLogin = channelLogin.toLowerCase();
 
@@ -91,9 +89,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('session_id');
-    const userId = await getOrCreateUser(sessionCookie?.value);
+    const sessionId = extractSessionIdentifier(request);
+    const userId = await getOrCreateUser(sessionId);
 
     const normalizedLogin = channelLogin.toLowerCase();
 

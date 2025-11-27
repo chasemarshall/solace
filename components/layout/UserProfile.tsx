@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { User, Settings, LogOut, Sun, Moon, Wifi } from "lucide-react";
 import { PROXY_ENDPOINTS } from "@/lib/twitch/proxyConfig";
@@ -382,116 +382,103 @@ export function UserProfile({ onAuthChange }: UserProfileProps) {
   const [authData, setAuthData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  const syncSession = useCallback(async () => {
+    try {
+      const response = await fetch('/api/auth/session', { credentials: 'include' });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setAuthData(null);
+          onAuthChange?.(false);
+          localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
+          localStorage.removeItem(STORAGE_KEYS.TWITCH_USERNAME);
+          localStorage.removeItem(STORAGE_KEYS.TWITCH_OAUTH);
+        }
+        return false;
+      }
+
+      const session = await response.json();
+      setAuthData(session);
+      onAuthChange?.(true, session);
+
+      localStorage.setItem(STORAGE_KEYS.TWITCH_AUTH, JSON.stringify(session));
+      localStorage.setItem(STORAGE_KEYS.TWITCH_USERNAME, session.user.login);
+
+      try {
+        const chatResponse = await fetch('/api/auth/chat-token');
+        if (chatResponse.ok) {
+          const chatData = await chatResponse.json();
+          if (chatData.oauth) {
+            localStorage.setItem(STORAGE_KEYS.TWITCH_OAUTH, chatData.oauth);
+          }
+        }
+      } catch (chatError) {
+        console.error('Failed to fetch chat token:', chatError);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to sync auth session:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [onAuthChange]);
+
   const handleLogin = () => {
     setLoading(true);
-    // Redirect to Twitch OAuth
     window.location.href = '/api/auth/twitch';
   };
 
   const handleLogout = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(error => {
+      console.error('Logout failed', error);
+    });
+
     setAuthData(null);
     onAuthChange?.(false);
     localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
-    // Clear any chat tokens
     localStorage.removeItem(STORAGE_KEYS.TWITCH_USERNAME);
     localStorage.removeItem(STORAGE_KEYS.TWITCH_OAUTH);
   };
 
   useEffect(() => {
-    // SECURITY: Check for auth data from secure cookie-based OAuth callback
-    const handleAuthCallback = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('auth') === 'success') {
-        // Read user data from cookie (tokens are in HTTP-only cookie)
-        const userCookie = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('twitch_user='));
-        
-        if (userCookie) {
-          try {
-            const cookieValue = decodeURIComponent(userCookie.split('=')[1]);
-            const decodedAuthData = JSON.parse(cookieValue);
-            setAuthData(decodedAuthData);
-            onAuthChange?.(true, decodedAuthData);
-            localStorage.setItem(STORAGE_KEYS.TWITCH_AUTH, JSON.stringify(decodedAuthData));
+    if (typeof window === 'undefined') return;
 
-            // Store basic user info for chat (tokens are server-side only now)
-            localStorage.setItem(STORAGE_KEYS.TWITCH_USERNAME, decodedAuthData.user.login);
+    const params = new URLSearchParams(window.location.search);
+    const hadAuthSuccess = params.get('auth') === 'success';
+    const authError = params.get('auth_error');
 
-            // Fetch chat token from secure API endpoint
-            fetch('/api/auth/chat-token')
-              .then(res => res.json())
-              .then(data => {
-                console.log('Chat token response:', data);
-                if (data.oauth) {
-                  localStorage.setItem(STORAGE_KEYS.TWITCH_OAUTH, data.oauth);
-                  console.log('Chat token stored successfully');
-                }
-              })
-              .catch(err => console.error('Failed to fetch chat token:', err));
-            
-            // Clean up URL
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('auth');
-            window.history.replaceState({}, document.title, newUrl.toString());
-            setLoading(false);
-          } catch (e) {
-            console.error('Failed to parse secure auth data');
-            setLoading(false);
-          }
-        }
-      } else if (urlParams.get('auth_error')) {
-        const error = urlParams.get('auth_error');
-        console.error('Authentication error:', error);
-        setLoading(false);
-      }
+    const updateUrl = () => {
+      const paramString = params.toString();
+      const nextUrl = `${window.location.pathname}${paramString ? `?${paramString}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, document.title, nextUrl);
     };
 
-    // Check for stored auth data
-    const storedAuth = localStorage.getItem(STORAGE_KEYS.TWITCH_AUTH);
-    if (storedAuth) {
-      try {
-        const parsedAuth = JSON.parse(storedAuth);
-        // Check if token is expired
-        if (parsedAuth.expires_at && Date.now() < parsedAuth.expires_at) {
-          setAuthData(parsedAuth);
-          onAuthChange?.(true, parsedAuth);
-          // Set chat credentials
-          localStorage.setItem(STORAGE_KEYS.TWITCH_USERNAME, parsedAuth.user.login);
-
-          // Fetch chat token from secure API endpoint
-          fetch('/api/auth/chat-token')
-            .then(res => res.json())
-            .then(data => {
-              console.log('Chat token response (stored auth):', data);
-              if (data.oauth) {
-                localStorage.setItem(STORAGE_KEYS.TWITCH_OAUTH, data.oauth);
-                console.log('Chat token stored successfully (stored auth)');
-              }
-            })
-            .catch(err => console.error('Failed to fetch chat token (stored auth):', err));
-        } else {
-          // Token expired, clear it
-          localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
-        }
-      } catch (e) {
-        localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
-      }
+    if (authError) {
+      console.error('Authentication error:', authError);
+      params.delete('auth_error');
+      updateUrl();
     }
 
-    // Handle OAuth callback
-    handleAuthCallback();
-    
-    // Listen for storage changes (auth in other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEYS.TWITCH_AUTH) {
-        if (e.newValue) {
+    if (hadAuthSuccess) {
+      params.delete('auth');
+      syncSession().finally(updateUrl);
+    } else {
+      syncSession();
+    }
+  }, [syncSession]);
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === STORAGE_KEYS.TWITCH_AUTH) {
+        if (event.newValue) {
           try {
-            const parsedAuth = JSON.parse(e.newValue);
+            const parsedAuth = JSON.parse(event.newValue);
             setAuthData(parsedAuth);
             onAuthChange?.(true, parsedAuth);
-          } catch (err) {
-            // Failed to parse stored auth
+          } catch {
+            // ignore malformed payloads
           }
         } else {
           setAuthData(null);
