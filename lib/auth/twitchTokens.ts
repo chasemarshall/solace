@@ -36,6 +36,10 @@ export type AuthCookiePayload = {
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 export function createTokenCookie(tokens: TwitchTokenCookie): CookieDescriptor {
+  // Keep the refresh token available well beyond the short-lived access token
+  // so we can silently refresh sessions instead of forcing users to log in each visit.
+  const maxAgeSeconds = ONE_YEAR_SECONDS;
+
   return {
     name: TOKEN_COOKIE_NAME,
     value: JSON.stringify(tokens),
@@ -43,7 +47,7 @@ export function createTokenCookie(tokens: TwitchTokenCookie): CookieDescriptor {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'strict',
-      maxAge: tokens.expires_in,
+      maxAge: maxAgeSeconds,
       path: '/',
     },
   };
