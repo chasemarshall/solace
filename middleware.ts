@@ -49,9 +49,12 @@ export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('session_id');
   if (!sessionCookie) {
     const sessionId = generateSessionId();
+    // Use secure cookies in production OR when serving over HTTPS
+    const isSecure = process.env.NODE_ENV === 'production' ||
+                     request.nextUrl.protocol === 'https:';
     response.cookies.set('session_id', sessionId, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 365, // 1 year
       path: '/',
