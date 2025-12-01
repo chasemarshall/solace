@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 
 interface FavoritesContextType {
   favorites: Set<string>;
@@ -56,10 +57,13 @@ interface FavoritesProviderProps {
 export function FavoritesProvider({ children }: FavoritesProviderProps) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated, authData } = useAuth();
 
   // Initialize favorites from database
+  // Reload when auth state changes (sign in/out)
   useEffect(() => {
     const loadFavorites = async () => {
+      setIsLoading(true);
       try {
         // First, check for localStorage favorites to migrate
         const localFavorites = getFavoritesFromStorage();
@@ -84,7 +88,7 @@ export function FavoritesProvider({ children }: FavoritesProviderProps) {
     };
 
     loadFavorites();
-  }, []);
+  }, [isAuthenticated, authData?.user?.id]); // Reload when auth state changes
 
   const addFavorite = async (channelLogin: string) => {
     const normalizedLogin = channelLogin.toLowerCase();

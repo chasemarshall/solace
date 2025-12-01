@@ -1,14 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { User, Settings, LogOut, Sun, Moon, Wifi } from "lucide-react";
 import { PROXY_ENDPOINTS } from "@/lib/twitch/proxyConfig";
 import { STORAGE_KEYS } from "@/lib/constants/storage";
-
-interface UserProfileProps {
-  onAuthChange?: (isAuthenticated: boolean, authData?: any) => void;
-}
+import { useAuth } from "@/contexts/AuthContext";
 
 function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -378,132 +375,22 @@ function UserProfileDropdown({ user, onLogout }: { user: any; onLogout: () => vo
   );
 }
 
-export function UserProfile({ onAuthChange }: UserProfileProps) {
-  const [authData, setAuthData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+export function UserProfile() {
+  const { authData, isAuthenticated, isLoading, login, logout } = useAuth();
 
-  const syncSession = useCallback(async () => {
-    try {
-      const response = await fetch('/api/auth/session', { credentials: 'include' });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setAuthData(null);
-          onAuthChange?.(false);
-          localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
-          localStorage.removeItem(STORAGE_KEYS.TWITCH_USERNAME);
-          localStorage.removeItem(STORAGE_KEYS.TWITCH_OAUTH);
-        }
-        return false;
-      }
-
-      const session = await response.json();
-      setAuthData(session);
-      onAuthChange?.(true, session);
-
-      localStorage.setItem(STORAGE_KEYS.TWITCH_AUTH, JSON.stringify(session));
-      localStorage.setItem(STORAGE_KEYS.TWITCH_USERNAME, session.user.login);
-
-      try {
-        const chatResponse = await fetch('/api/auth/chat-token');
-        if (chatResponse.ok) {
-          const chatData = await chatResponse.json();
-          if (chatData.oauth) {
-            localStorage.setItem(STORAGE_KEYS.TWITCH_OAUTH, chatData.oauth);
-          }
-        }
-      } catch (chatError) {
-        console.error('Failed to fetch chat token:', chatError);
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Failed to sync auth session:', error);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [onAuthChange]);
-
-  const handleLogin = () => {
-    setLoading(true);
-    window.location.href = '/api/auth/twitch';
-  };
-
-  const handleLogout = () => {
-    fetch('/api/auth/logout', { method: 'POST' }).catch(error => {
-      console.error('Logout failed', error);
-    });
-
-    setAuthData(null);
-    onAuthChange?.(false);
-    localStorage.removeItem(STORAGE_KEYS.TWITCH_AUTH);
-    localStorage.removeItem(STORAGE_KEYS.TWITCH_USERNAME);
-    localStorage.removeItem(STORAGE_KEYS.TWITCH_OAUTH);
-  };
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const params = new URLSearchParams(window.location.search);
-    const hadAuthSuccess = params.get('auth') === 'success';
-    const authError = params.get('auth_error');
-
-    const updateUrl = () => {
-      const paramString = params.toString();
-      const nextUrl = `${window.location.pathname}${paramString ? `?${paramString}` : ''}${window.location.hash}`;
-      window.history.replaceState({}, document.title, nextUrl);
-    };
-
-    if (authError) {
-      console.error('Authentication error:', authError);
-      params.delete('auth_error');
-      updateUrl();
-    }
-
-    if (hadAuthSuccess) {
-      params.delete('auth');
-      syncSession().finally(updateUrl);
-    } else {
-      syncSession();
-    }
-  }, [syncSession]);
-
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEYS.TWITCH_AUTH) {
-        if (event.newValue) {
-          try {
-            const parsedAuth = JSON.parse(event.newValue);
-            setAuthData(parsedAuth);
-            onAuthChange?.(true, parsedAuth);
-          } catch {
-            // ignore malformed payloads
-          }
-        } else {
-          setAuthData(null);
-          onAuthChange?.(false);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [onAuthChange]);
-
-  if (authData) {
+  if (isAuthenticated && authData) {
     const user = authData.user;
-    return <UserProfileDropdown user={user} onLogout={handleLogout} />;
+    return <UserProfileDropdown user={user} onLogout={logout} />;
   }
 
   return (
     <button
-      onClick={handleLogin}
-      disabled={loading}
+      onClick={login}
+      disabled={isLoading}
       className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-surface hover:bg-white/5 transition-colors disabled:opacity-50"
     >
       <User className="w-4 h-4" />
-      <span className="text-sm">{loading ? "connecting..." : "sign in"}</span>
+      <span className="text-sm">{isLoading ? "connecting..." : "sign in"}</span>
     </button>
   );
 }

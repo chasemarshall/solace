@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import { ImmersiveProvider } from "@/contexts/ImmersiveContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { StorageAccessProvider } from "@/components/player/StorageAccessManager";
 import LayoutContent from "@/components/layout/LayoutContent";
@@ -37,15 +38,17 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-bg text-text min-h-screen">
         <BrowserCompatInit />
-        <FavoritesProvider>
-          <ImmersiveProvider>
-            <StorageAccessProvider>
-              <LayoutContent>
-                {children}
-              </LayoutContent>
-            </StorageAccessProvider>
-          </ImmersiveProvider>
-        </FavoritesProvider>
+        <AuthProvider>
+          <FavoritesProvider>
+            <ImmersiveProvider>
+              <StorageAccessProvider>
+                <LayoutContent>
+                  {children}
+                </LayoutContent>
+              </StorageAccessProvider>
+            </ImmersiveProvider>
+          </FavoritesProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>
