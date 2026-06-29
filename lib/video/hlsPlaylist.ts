@@ -334,3 +334,10 @@ export function processHlsPlaylist(
 ): string {
   return rewritePlaylistUrls(stripAdSegments(playlistText), baseUrl, wrap);
 }
+
+export function processHlsPlaylistForDirectPlayback(
+  playlistText: string,
+  baseUrl?: string,
+): string {
+  return rewritePlaylistUrls(stripAdSegments(playlistText), baseUrl, url => url);
+}

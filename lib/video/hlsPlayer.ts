@@ -28,15 +28,23 @@ export function initHlsPlayer(
   const hls = new Hls(HLS_CONFIG);
 
   let mediaErrorRecoveries = 0;
+  let networkErrorRecoveries = 0;
   const MAX_MEDIA_RECOVERIES = 3;
+  const MAX_NETWORK_RECOVERIES = 3;
 
   hls.on(Hls.Events.ERROR, (_event, data) => {
     if (!data.fatal) return;
 
     switch (data.type) {
       case Hls.ErrorTypes.NETWORK_ERROR:
-        console.warn('[HLS] Network error, attempting recovery...');
-        hls.startLoad();
+        if (networkErrorRecoveries < MAX_NETWORK_RECOVERIES) {
+          networkErrorRecoveries++;
+          console.warn(`[HLS] Network error, recovering (${networkErrorRecoveries}/${MAX_NETWORK_RECOVERIES})...`);
+          hls.startLoad();
+        } else {
+          console.error('[HLS] Fatal network error after max recoveries');
+          onFatal?.();
+        }
         break;
       case Hls.ErrorTypes.MEDIA_ERROR:
         if (mediaErrorRecoveries < MAX_MEDIA_RECOVERIES) {

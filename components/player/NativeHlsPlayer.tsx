@@ -50,10 +50,12 @@ export default function NativeHlsPlayer({ channel, onFallback, className }: Nati
     if (preferNative === null || !videoRef.current) return;
 
     let cancelled = false;
+    let activeVideo: HTMLVideoElement | null = null;
 
     async function setup() {
       const el = videoRef.current;
       if (!el) return;
+      activeVideo = el;
 
       try {
         // Fetch playback token directly from Twitch GQL (client-side)
@@ -61,19 +63,10 @@ export default function NativeHlsPlayer({ channel, onFallback, className }: Nati
         const { m3u8Url } = await fetchPlaybackToken(channel);
         if (cancelled) return;
 
-        if (preferNative && el.canPlayType('application/vnd.apple.mpegurl')) {
-          // Safari: native HLS should use the same proxy target selection as
-          // the hls.js path so external proxy deployments work consistently.
-          el.src = proxyUrl(m3u8Url);
-          el.addEventListener('loadeddata', () => {
-            if (!cancelled) setLoading(false);
-          }, { once: true });
-          el.addEventListener('error', () => {
-            if (!cancelled) onFallback();
-          }, { once: true });
-          el.play().catch(() => {});
-        } else if (Hls.isSupported()) {
-          // hls.js for Chrome/Firefox/Edge
+        if (Hls.isSupported()) {
+          // hls.js keeps HLS requests browser-side, which avoids routing live
+          // media through Vercel serverless while still letting our loader
+          // strip playlist ad markers.
           const hls = initHlsPlayer(el, m3u8Url, () => {
             if (!cancelled) onFallback();
           });
@@ -89,6 +82,17 @@ export default function NativeHlsPlayer({ channel, onFallback, className }: Nati
           hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
             if (!cancelled) setCurrentQuality(data.level);
           });
+        } else if (preferNative && el.canPlayType('application/vnd.apple.mpegurl')) {
+          // Native HLS cannot intercept playlists, so it still uses the local
+          // proxy as a best-effort fallback on platforms without hls.js.
+          el.src = proxyUrl(m3u8Url);
+          el.addEventListener('loadeddata', () => {
+            if (!cancelled) setLoading(false);
+          }, { once: true });
+          el.addEventListener('error', () => {
+            if (!cancelled) onFallback();
+          }, { once: true });
+          el.play().catch(() => {});
         } else {
           onFallback();
         }
@@ -104,7 +108,7 @@ export default function NativeHlsPlayer({ channel, onFallback, className }: Nati
       cancelled = true;
       destroyHlsPlayer(hlsRef.current);
       hlsRef.current = null;
-      const el = videoRef.current;
+      const el = activeVideo;
       if (el) {
         el.pause();
         el.removeAttribute('src');

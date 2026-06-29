@@ -3,6 +3,7 @@ import {
   hasAdSegments,
   isLikelyAdResourceUrl,
   processHlsPlaylist,
+  processHlsPlaylistForDirectPlayback,
   proxyUrl,
   rewritePlaylistUrls,
   stripAdSegments,
@@ -288,6 +289,24 @@ describe('hlsPlaylist', () => {
       const out = processHlsPlaylist(input, 'https://usher.ttvnw.net/api/channel/hls/foo.m3u8?token=1');
       expect(out).not.toContain('ad-1.ts');
       expect(out).toContain('/api/proxy?url=https%3A%2F%2Fusher.ttvnw.net%2Fapi%2Fchannel%2Fhls%2Flive-1.ts');
+    });
+  });
+
+  describe('processHlsPlaylistForDirectPlayback', () => {
+    it('strips ads and resolves remaining resources without proxying through Vercel', () => {
+      const input = [
+        '#EXTM3U',
+        '#EXT-X-DATERANGE:ID="stitched-ad-6",CLASS="twitch-stitched-ad",DURATION=2.0',
+        '#EXTINF:2.0,ad',
+        'ad-1.ts',
+        '#EXTINF:2.0,',
+        'live-1.ts',
+      ].join('\n');
+
+      const out = processHlsPlaylistForDirectPlayback(input, 'https://usher.ttvnw.net/api/channel/hls/foo.m3u8?token=1');
+      expect(out).not.toContain('ad-1.ts');
+      expect(out).not.toContain('/api/proxy');
+      expect(out).toContain('https://usher.ttvnw.net/api/channel/hls/live-1.ts');
     });
   });
 });
