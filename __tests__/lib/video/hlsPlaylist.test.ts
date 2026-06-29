@@ -226,6 +226,12 @@ describe('hlsPlaylist', () => {
   });
 
   describe('rewritePlaylistUrls', () => {
+    it('wraps URLs through the app-local proxy route', () => {
+      expect(proxyUrl('https://video-edge.twitch.tv/seg.ts')).toBe(
+        '/api/proxy?url=https%3A%2F%2Fvideo-edge.twitch.tv%2Fseg.ts',
+      );
+    });
+
     it('wraps absolute URLs through the proxy', () => {
       const input = [
         '#EXTM3U',

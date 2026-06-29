@@ -20,6 +20,17 @@ export function connectChat({ channel, username, oauth }: { channel: string; use
     console.log('Chat connecting anonymously - no credentials');
   }
   const client = new tmi.Client(opts);
-  client.connect();
+
+  const handleConnectionError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn('[TwitchChat] Unable to connect:', message);
+  };
+
+  try {
+    void Promise.resolve(client.connect()).catch(handleConnectionError);
+  } catch (error) {
+    handleConnectionError(error);
+  }
+
   return client;
 }

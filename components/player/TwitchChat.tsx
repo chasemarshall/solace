@@ -71,6 +71,14 @@ const isValidEmoteUrl = (url: string): boolean => {
   }
 };
 
+function disconnectChatClient(client: Client): void {
+  try {
+    void Promise.resolve(client.disconnect()).catch(() => {});
+  } catch {
+    // The client may already be disconnected or mid-close.
+  }
+}
+
 export default function TwitchChat({ channel, playerMode = "basic" }: { channel: string; playerMode?: "basic" | "enhanced" }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -99,6 +107,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   // Get credentials from localStorage (set by UserProfile after OAuth)
   const [username, setUsername] = useState<string | undefined>();
   const [oauth, setOauth] = useState<string | undefined>();
+  const [credentialsLoaded, setCredentialsLoaded] = useState(false);
   const canSend = !!username && !!oauth;
 
   // Load credentials from localStorage
@@ -108,6 +117,7 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
 
     setUsername(storedUsername || undefined);
     setOauth(storedOauth || undefined);
+    setCredentialsLoaded(true);
   }, []);
 
   // Listen for credential changes using custom hook
@@ -563,13 +573,13 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
   }, [channel, fetchBttvEmotes, fetchFfzEmotes, fetchSeventvEmotes, playerMode, bttvEnabled, ffzEnabled, seventvEnabled]);
 
   useEffect(() => {
+    if (!credentialsLoaded) {
+      return;
+    }
+
     // Clean up any existing client first
     if (clientRef.current) {
-      try {
-        clientRef.current.disconnect();
-      } catch (e) {
-        // Error disconnecting previous client
-      }
+      disconnectChatClient(clientRef.current);
       clientRef.current = null;
     }
     
@@ -635,10 +645,12 @@ export default function TwitchChat({ channel, playerMode = "basic" }: { channel:
     });
 
     return () => {
-      client.disconnect();
-      clientRef.current = null;
+      disconnectChatClient(client);
+      if (clientRef.current === client) {
+        clientRef.current = null;
+      }
     };
-  }, [channel, username, oauth]);
+  }, [channel, username, oauth, credentialsLoaded]);
 
   // Auto-scroll to bottom. Marks the scroll as programmatic so the pause
   // detector ignores the resulting scroll event (fixes Firefox race condition).

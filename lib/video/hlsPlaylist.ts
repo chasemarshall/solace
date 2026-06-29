@@ -271,16 +271,11 @@ export function hasAdSegments(playlistText: string): boolean {
 
 /**
  * Wrap a URL through the proxy endpoint to bypass CORS.
- * Defaults to the app-local Next.js proxy route. Override with
- * NEXT_PUBLIC_TTV_PROXY_URL when an external proxy is explicitly desired.
+ * The custom player must use the app-local route so HLS manifests and
+ * resources pass through the same ad-filtering pipeline end to end.
  */
-const PROXY_BASE =
-  (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TTV_PROXY_URL?.trim()) ||
-  '';
-
 export function proxyUrl(url: string): string {
-  if (!PROXY_BASE) return `/api/proxy?url=${encodeURIComponent(url)}`;
-  return `${PROXY_BASE.replace(/\/+$/, '')}/?url=${encodeURIComponent(url)}`;
+  return `/api/proxy?url=${encodeURIComponent(url)}`;
 }
 
 /**
