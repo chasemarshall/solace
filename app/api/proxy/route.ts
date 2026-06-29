@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasAdSegments, rewritePlaylistUrls, stripAdSegments } from "@/lib/video/hlsPlaylist";
+import { isLikelyAdResourceUrl, processHlsPlaylist } from "@/lib/video/hlsPlaylist";
 
 // SECURITY: Only allow same-origin requests or configured origins.
 // Returns null when the origin is cross-origin and not on the allowlist —
@@ -103,6 +103,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing target URL' }, { status: 400 });
   }
 
+  if (isLikelyAdResourceUrl(target)) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        ...corsHeadersFor(request),
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
+
   // SECURITY: Validate URL before making request
   if (!validateUrl(target)) {
     console.error('[proxy] Blocked URL:', target);
@@ -152,12 +162,9 @@ export async function GET(request: NextRequest) {
       // absolute proxy URLs so that neither the browser (for Safari native
       // HLS) nor hls.js can mis-resolve them against the upstream URL.
       if (content.includes('#EXTM3U')) {
-        if (hasAdSegments(content)) {
-          content = stripAdSegments(content);
-        }
         const origin = request.nextUrl.origin;
         const wrap = (u: string) => `${origin}/api/proxy?url=${encodeURIComponent(u)}`;
-        content = rewritePlaylistUrls(content, target, wrap);
+        content = processHlsPlaylist(content, target, wrap);
       }
 
       return new NextResponse(content, {

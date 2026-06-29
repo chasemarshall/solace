@@ -9,9 +9,9 @@
  */
 
 import Hls from 'hls.js';
-import { hasAdSegments, proxyUrl, rewritePlaylistUrls, stripAdSegments } from './hlsPlaylist';
+import { hasAdSegments, processHlsPlaylist, proxyUrl, stripAdSegments } from './hlsPlaylist';
 
-export { hasAdSegments, proxyUrl, rewritePlaylistUrls, stripAdSegments };
+export { hasAdSegments, processHlsPlaylist, proxyUrl, stripAdSegments };
 
 const CUSTOM_PROXY_BASE =
   (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TTV_PROXY_URL?.trim()) || '';
@@ -69,13 +69,17 @@ export function createAdFilterLoader(): typeof Hls.DefaultConfig.loader {
           // Playlists served by /api/proxy already have nested URIs rewritten.
           // Rewriting them again here produces `/api/proxy?url=http://localhost/...`
           // double-wraps that fail the proxy allowlist in Chromium/Firefox.
-          if (response.data.includes('#EXTM3U') && !playlistAlreadyUsesProxyRoutes(response.data)) {
-            response.data = rewritePlaylistUrls(response.data, originalUrl);
-          }
+          if (response.data.includes('#EXTM3U')) {
+            const alreadyProxiedPlaylist = playlistAlreadyUsesProxyRoutes(response.data);
+            const hadAds = hasAdSegments(response.data);
 
-          if (response.data.includes('#EXTINF:') && hasAdSegments(response.data)) {
-            console.log('[AdFilter] Stripping ad segments from playlist');
-            response.data = stripAdSegments(response.data);
+            response.data = alreadyProxiedPlaylist
+              ? stripAdSegments(response.data)
+              : processHlsPlaylist(response.data, originalUrl);
+
+            if (hadAds) {
+              console.log('[AdFilter] Stripped ad segments from playlist');
+            }
           }
         }
         originalOnSuccess(response, stats, ctx, networkDetails);

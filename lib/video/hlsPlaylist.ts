@@ -7,7 +7,8 @@
  * The ad content lives inside DISCONTINUITY blocks in the media playlist.
  */
 
-const AD_DATERANGE_PATTERN = /^#EXT-X-DATERANGE:.*(?:CLASS="twitch-stitched-ad"|ID="stitched-ad|CLASS="twitch-ad"|stitched-ad|X-TV-TWITCH-AD-[A-Z0-9-]+|MIDROLL|midroll|X-TV-TWITCH-LIVE-SEQUENCE|X-TV-TWITCH-ELAPSED-SECS)/i;
+const AD_DATERANGE_PATTERN = /^#EXT-X-DATERANGE:.*(?:CLASS="twitch-stitched-ad"|ID="stitched-ad|CLASS="twitch-ad"|stitched-ad|X-TV-TWITCH-AD-[A-Z0-9-]+|MIDROLL|PREROLL|COMMERCIAL|SCTE35-OUT|X-TV-TWITCH-LIVE-SEQUENCE|X-TV-TWITCH-ELAPSED-SECS)/i;
+const AD_SCTE35_PATTERN = /^#EXT-X-(?:SCTE35|SPLICEPOINT-SCTE35|OATCLS-SCTE35)/i;
 const AD_SCTE35_OUT_PATTERN = /^#EXT-X-SCTE35-OUT/i;
 const AD_SCTE35_IN_PATTERN = /^#EXT-X-SCTE35-IN/i;
 const AD_CUE_OUT_PATTERN = /^#EXT-X-CUE-OUT/i;
@@ -16,8 +17,20 @@ const AD_CUE_IN_PATTERN = /^#EXT-X-CUE-IN/i;
 const DISCONTINUITY_PATTERN = /^#EXT-X-DISCONTINUITY$/;
 const PREFETCH_PATTERN = /^#EXT-X-TWITCH-PREFETCH:/;
 const EXTINF_PATTERN = /^#EXTINF:([0-9.]+)/;
-const DATERANGE_DURATION_PATTERN = /DURATION=([0-9.]+)/;
+const DATERANGE_DURATION_PATTERN = /(?:DURATION|PLANNED-DURATION)=([0-9.]+)/i;
+const CUE_OUT_DURATION_PATTERN = /(?:Duration|DURATION)=([0-9.]+)/;
+const CUE_OUT_ELAPSED_PATTERN = /(?:ElapsedTime|ELAPSED)=([0-9.]+)/;
+const CUE_OUT_INLINE_DURATION_PATTERN = /^#EXT-X-CUE-OUT:([0-9.]+)/i;
 const LIVE_EXTINF_PATTERN = /^#EXTINF:[0-9.]+,live\b/i;
+const AD_SEGMENT_HINT_PATTERN = /(?:^|[,/_.?&=-])(?:ad|ads|advert|advertisement|commercial|stitched-ad|stitched_ad|preroll|pre-roll|midroll|mid-roll)(?:$|[,/_.?&=-])/i;
+const AD_RESOURCE_HOSTS = [
+  'ads.twitch.tv',
+  'twitchads.com',
+  'pubads.g.doubleclick.net',
+  'googleads.g.doubleclick.net',
+  'googlesyndication.com',
+  'amazon-adsystem.com',
+];
 const AD_TRACKING_URL_PATTERNS = [
   /(X-TV-TWITCH-AD-URL=")(?:[^"]*)(")/g,
   /(X-TV-TWITCH-AD-CLICK-TRACKING-URL=")(?:[^"]*)(")/g,
@@ -29,6 +42,56 @@ function sanitizeAdMetadata(line: string): string {
     sanitized = sanitized.replace(pattern, '$1https://twitch.tv$2');
   }
   return sanitized;
+}
+
+function isAdStartMarker(line: string): boolean {
+  return AD_DATERANGE_PATTERN.test(line) ||
+    AD_SCTE35_OUT_PATTERN.test(line) ||
+    AD_CUE_OUT_PATTERN.test(line) ||
+    AD_CUE_OUT_CONT_PATTERN.test(line) ||
+    (AD_SCTE35_PATTERN.test(line) && !AD_SCTE35_IN_PATTERN.test(line));
+}
+
+function isAdEndMarker(line: string): boolean {
+  return AD_SCTE35_IN_PATTERN.test(line) || AD_CUE_IN_PATTERN.test(line);
+}
+
+function isMediaResourceLine(line: string): boolean {
+  return !line.startsWith('#') && line.trim().length > 0;
+}
+
+function getAdDurationTarget(line: string): number {
+  const daterangeDuration = line.match(DATERANGE_DURATION_PATTERN);
+  if (daterangeDuration) {
+    return parseFloat(daterangeDuration[1]);
+  }
+
+  const cueDuration = line.match(CUE_OUT_DURATION_PATTERN) || line.match(CUE_OUT_INLINE_DURATION_PATTERN);
+  if (!cueDuration) {
+    return 0;
+  }
+
+  const duration = parseFloat(cueDuration[1]);
+  const elapsed = parseFloat(line.match(CUE_OUT_ELAPSED_PATTERN)?.[1] || '0');
+  return Math.max(duration - elapsed, 0);
+}
+
+export function isLikelyAdResourceUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith('#')) {
+    return false;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    const hostname = url.hostname.toLowerCase();
+    if (AD_RESOURCE_HOSTS.some(host => hostname === host || hostname.endsWith(`.${host}`))) {
+      return true;
+    }
+    return AD_SEGMENT_HINT_PATTERN.test(`${url.pathname}${url.search}`);
+  } catch {
+    return AD_SEGMENT_HINT_PATTERN.test(trimmed);
+  }
 }
 
 function stripResidualAdSegments(lines: string[]): string[] {
@@ -46,13 +109,7 @@ function stripResidualAdSegments(lines: string[]): string[] {
       continue;
     }
 
-    if (
-      AD_SCTE35_OUT_PATTERN.test(line) ||
-      AD_SCTE35_IN_PATTERN.test(line) ||
-      AD_CUE_OUT_PATTERN.test(line) ||
-      AD_CUE_OUT_CONT_PATTERN.test(line) ||
-      AD_CUE_IN_PATTERN.test(line)
-    ) {
+    if (isAdStartMarker(line) || isAdEndMarker(line)) {
       continue;
     }
 
@@ -61,9 +118,9 @@ function stripResidualAdSegments(lines: string[]): string[] {
       continue;
     }
 
-    if (!line.startsWith('#') && line.trim().length > 0) {
+    if (isMediaResourceLine(line)) {
       if (pendingExtinf) {
-        if (LIVE_EXTINF_PATTERN.test(pendingExtinf)) {
+        if (!AD_SEGMENT_HINT_PATTERN.test(pendingExtinf) && !isLikelyAdResourceUrl(line)) {
           output.push(pendingExtinf);
           output.push(line);
         }
@@ -109,42 +166,39 @@ export function stripAdSegments(playlistText: string): string {
   let adDurationTarget = 0;
   let adDurationElapsed = 0;
   let discontinuitiesSeen = 0;
+  let droppedAdSegments = 0;
+  let pendingAdSegmentDuration = 0;
 
   const exitAd = () => {
     inAd = false;
     adDurationTarget = 0;
     adDurationElapsed = 0;
     discontinuitiesSeen = 0;
+    droppedAdSegments = 0;
+    pendingAdSegmentDuration = 0;
   };
 
   for (let i = 0; i < lines.length; i++) {
     const line = sanitizeAdMetadata(lines[i]);
 
-    if (AD_DATERANGE_PATTERN.test(line)) {
+    if (isAdStartMarker(line)) {
       sawAdMarkers = true;
       inAd = true;
-      const match = line.match(DATERANGE_DURATION_PATTERN);
-      adDurationTarget = match ? parseFloat(match[1]) : 0;
+      adDurationTarget = getAdDurationTarget(line);
       adDurationElapsed = 0;
       discontinuitiesSeen = 0;
+      droppedAdSegments = 0;
+      pendingAdSegmentDuration = 0;
       continue;
     }
 
-    if (
-      AD_SCTE35_OUT_PATTERN.test(line) ||
-      AD_CUE_OUT_PATTERN.test(line) ||
-      AD_CUE_OUT_CONT_PATTERN.test(line)
-    ) {
-      sawAdMarkers = true;
-      inAd = true;
-      adDurationTarget = 0;
-      adDurationElapsed = 0;
-      discontinuitiesSeen = 0;
-      continue;
-    }
-
-    if (AD_SCTE35_IN_PATTERN.test(line) || AD_CUE_IN_PATTERN.test(line)) {
+    if (isAdEndMarker(line)) {
       exitAd();
+      continue;
+    }
+
+    if (!inAd && isMediaResourceLine(line) && isLikelyAdResourceUrl(line)) {
+      sawAdMarkers = true;
       continue;
     }
 
@@ -154,7 +208,7 @@ export function stripAdSegments(playlistText: string): string {
 
       if (DISCONTINUITY_PATTERN.test(line)) {
         discontinuitiesSeen++;
-        if (!adDurationTarget && discontinuitiesSeen >= 2) {
+        if (discontinuitiesSeen >= 2 || droppedAdSegments > 0) {
           exitAd();
           output.push(line);
         }
@@ -168,12 +222,16 @@ export function stripAdSegments(playlistText: string): string {
           output.push(line);
           continue;
         }
-        adDurationElapsed += parseFloat(extinf[1]);
+        pendingAdSegmentDuration = parseFloat(extinf[1]);
         continue;
       }
 
       // Segment URL line: drop
-      if (!line.startsWith('#') && line.trim().length > 0) {
+      if (isMediaResourceLine(line)) {
+        droppedAdSegments++;
+        adDurationElapsed += pendingAdSegmentDuration;
+        pendingAdSegmentDuration = 0;
+
         if (adDurationTarget && adDurationElapsed >= adDurationTarget) {
           exitAd();
         }
@@ -181,6 +239,10 @@ export function stripAdSegments(playlistText: string): string {
       }
 
       // Any other tag while in ad: drop
+      continue;
+    }
+
+    if (PREFETCH_PATTERN.test(line)) {
       continue;
     }
 
@@ -198,10 +260,8 @@ export function hasAdSegments(playlistText: string): boolean {
   const lines = playlistText.split('\n');
   for (const line of lines) {
     if (
-      AD_DATERANGE_PATTERN.test(line) ||
-      AD_SCTE35_OUT_PATTERN.test(line) ||
-      AD_CUE_OUT_PATTERN.test(line) ||
-      AD_CUE_OUT_CONT_PATTERN.test(line)
+      isAdStartMarker(line) ||
+      isLikelyAdResourceUrl(line)
     ) {
       return true;
     }
@@ -270,4 +330,12 @@ export function rewritePlaylistUrls(
   }
 
   return out.join('\n');
+}
+
+export function processHlsPlaylist(
+  playlistText: string,
+  baseUrl?: string,
+  wrap: (url: string) => string = proxyUrl,
+): string {
+  return rewritePlaylistUrls(stripAdSegments(playlistText), baseUrl, wrap);
 }

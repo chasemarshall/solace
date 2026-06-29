@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 let cached: { token: string; expiresAt: number } | null = null;
 
 export async function GET() {
